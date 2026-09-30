@@ -113,6 +113,8 @@ Every Monday, `pg_cron` checks the legal sources the rulebook cites (`source_wat
 - **GB (legislation.gov.uk):** a hash of the provision's own text (Articles 4 and 19, Annexes II and III), so edits elsewhere in the regulation don't trigger it.
 - **EU:** EUR-Lex blocks automated requests, so the monitor asks the EU Publications Office for the latest consolidated version of Regulation (EC) 1223/2009 instead (e.g. `02009R1223-20260518`). A new consolidation means an amendment has been folded in; check what changed on EUR-Lex.
 
+**What exactly changed:** every Monday at 07:30 UTC, the **Check official rulebook sources** GitHub workflow (`.github/workflows/rulebook-sources.yml`) downloads the GB and EU texts again, re-parses Annexes II–VI and refreshes the CosIng links. If any entry changed, it opens a draft PR that lists each added, removed or changed entry, field by field (e.g. "Annex V, entry 29, Phenoxyethanol: Maximum `1,0 %` → `0,8 %`"). The PR includes a new draft rulebook version; entries that didn't change keep their sign-off. Merge it, then review and publish in **/admin/leads → Rulebook**. Opening the PR needs *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests*; without it, the workflow opens an issue pointing at the branch instead. You can also run it by hand from the Actions tab.
+
 The first run only records a baseline. Check the queue and the last run:
 
 ```sql
