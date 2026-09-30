@@ -1,11 +1,24 @@
-import { X, ScanLine } from "lucide-react";
+import { X, ScanLine, GitCompare, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { ScanHandoff } from "@/lib/scan-to-label";
 import { findingStatusLabel, rulebookStampText } from "@/lib/rule-findings";
 import { cn } from "@/lib/utils";
 
 // Shown in the label builder after "Fix these" on a scan: the issues the
 // rulebook found on the scanned label, as a to-do list for the new draft.
-const ScanTodo = ({ handoff, onDismiss }: { handoff: ScanHandoff; onDismiss: () => void }) => (
+const ScanTodo = ({
+  handoff,
+  onDismiss,
+  changeCount,
+  approvedUrl,
+  onReview,
+}: {
+  handoff: ScanHandoff;
+  onDismiss: () => void;
+  changeCount: number;
+  approvedUrl: string | null;
+  onReview: () => void;
+}) => (
   <section className="mb-6 rounded-lg border border-primary/30 bg-primary/5 p-5">
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-start gap-2">
@@ -48,6 +61,21 @@ const ScanTodo = ({ handoff, onDismiss }: { handoff: ScanHandoff; onDismiss: () 
         ))}
       </ul>
     )}
+    <div className="mt-4 flex flex-wrap items-center gap-3">
+      {approvedUrl ? (
+        <p className="inline-flex items-center gap-1.5 text-sm text-[hsl(var(--risk-low))]">
+          <CheckCircle2 className="h-4 w-4" /> New version approved ·{" "}
+          <a href={approvedUrl} className="underline" target="_blank" rel="noopener noreferrer">
+            view label
+          </a>
+        </p>
+      ) : (
+        <Button size="sm" className="gap-2" onClick={onReview}>
+          <GitCompare className="h-4 w-4" />
+          Review {changeCount > 0 ? `${changeCount} change${changeCount === 1 ? "" : "s"}` : "changes"} and approve
+        </Button>
+      )}
+    </div>
     {handoff.rulebook && (
       <p className="mt-3 text-[11px] text-muted-foreground">{rulebookStampText(handoff.rulebook, handoff.findings)}</p>
     )}

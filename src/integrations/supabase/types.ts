@@ -162,6 +162,9 @@ export type Database = {
           quid_percent: string | null
           responsible_person: string | null
           eu_responsible_person: string | null
+          source_scan_id: string | null
+          changes_from_scan: Json | null
+          approved_at: string | null
           markets: string[] | null
           signup_id: string | null
           storage_instructions: string | null
@@ -198,6 +201,9 @@ export type Database = {
           quid_percent?: string | null
           responsible_person?: string | null
           eu_responsible_person?: string | null
+          source_scan_id?: string | null
+          changes_from_scan?: Json | null
+          approved_at?: string | null
           markets?: string[] | null
           signup_id?: string | null
           storage_instructions?: string | null
@@ -234,6 +240,9 @@ export type Database = {
           quid_percent?: string | null
           responsible_person?: string | null
           eu_responsible_person?: string | null
+          source_scan_id?: string | null
+          changes_from_scan?: Json | null
+          approved_at?: string | null
           markets?: string[] | null
           signup_id?: string | null
           storage_instructions?: string | null

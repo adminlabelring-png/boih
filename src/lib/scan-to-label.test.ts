@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scanToLabel } from "./scan-to-label";
+import { diffAgainstScan, scanToLabel } from "./scan-to-label";
 import type { DetectedField, RuleFinding, ScanResult } from "./scan-context";
 
 const f = (label: string, value: string | null, status: DetectedField["status"] = "verified"): DetectedField => ({
@@ -95,5 +95,53 @@ describe("scanToLabel", () => {
 
   it("maps unknown categories to Other", () => {
     expect(scanToLabel(result({ category: "Toy" })).fields.category).toBe("Other");
+  });
+});
+
+describe("diffAgainstScan", () => {
+  const base = scanToLabel(
+    result({
+      fields: [
+        f("Product Name", "Rose Cream"),
+        f("Ingredients", "Aqua, Parfum, Lilial"),
+        f("Manufacturer / Responsible Person", "Glow Ltd, London EC1A 1BB"),
+        f("Expiry / Best Before", "12M"),
+      ],
+    })
+  );
+  const ingredientFinding: RuleFinding = {
+    ...finding("prohibited_substances", "fail"),
+    title: "No prohibited substances",
+    field: "Ingredients",
+    fix: "Remove the prohibited substance and reformulate.",
+  };
+
+  it("lists only fields that changed, each with a one-line reason", () => {
+    const draft = {
+      ...base.fields,
+      ingredients: "Aqua, Parfum",
+      euResponsiblePerson: "Glow BV, Amsterdam, Netherlands",
+      paoMonths: "6",
+    };
+    const changes = diffAgainstScan(base.fields, draft, [ingredientFinding]);
+    expect(changes.map((c) => c.key)).toEqual(["ingredients", "euResponsiblePerson", "date"]);
+    expect(changes[0]).toMatchObject({
+      before: "Aqua, Parfum, Lilial",
+      after: "Aqua, Parfum",
+      reason: "No prohibited substances: Remove the prohibited substance and reformulate.",
+    });
+    expect(changes[1].before).toBe("");
+    expect(changes[2]).toMatchObject({ before: "PAO 12M", after: "PAO 6M", reason: "Edited by you" });
+  });
+
+  it("ignores whitespace-only edits and returns nothing when unchanged", () => {
+    expect(diffAgainstScan(base.fields, { ...base.fields, productName: " Rose  Cream " }, [])).toEqual([]);
+  });
+
+  it("keeps reasons to one short line", () => {
+    const long: RuleFinding = { ...ingredientFinding, fix: "x ".repeat(200) };
+    const [c] = diffAgainstScan(base.fields, { ...base.fields, ingredients: "Aqua" }, [long]);
+    expect(c.reason.length).toBeLessThanOrEqual(140);
+    expect(c.reason).not.toMatch(/\n/);
   });
 });

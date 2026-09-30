@@ -8,6 +8,7 @@ import type { DetectedField, RuleFinding, RulebookStamp, ScanResult } from "./sc
 // over — nothing is guessed to fill a gap.
 
 export interface ScanHandoff {
+  scanId: string | null;
   fields: LabelFields;
   findings: RuleFinding[];
   rulebook: RulebookStamp | null;
@@ -82,9 +83,80 @@ export const scanToLabel = (result: ScanResult): ScanHandoff => {
   });
 
   return {
+    scanId: result.scanId ?? null,
     fields,
     findings: result.findings.filter((f) => f.status !== "pass"),
     rulebook: result.rulebook,
     prefilled,
   };
 };
+
+// ------------------------------------------------------------------
+// Old vs new: what changed between the scanned label and the new draft,
+// with a one-line reason per change for the approval step.
+// ------------------------------------------------------------------
+
+export interface LabelChange {
+  key: string;
+  label: string;
+  before: string;
+  after: string;
+  reason: string;
+}
+
+// Label-builder fields, grouped as they'd be read on the pack, with the
+// scanner field the rulebook's findings refer to.
+const CHANGE_FIELDS: { key: string; label: string; scanField: string; read: (f: LabelFields) => string }[] = [
+  { key: "productName", label: "Product name", scanField: "Product Name", read: (f) => f.productName },
+  { key: "ingredients", label: "Ingredients", scanField: "Ingredients", read: (f) => f.ingredients },
+  {
+    key: "fragranceAllergens",
+    label: "Fragrance allergens",
+    scanField: "Ingredients",
+    read: (f) => f.fragranceAllergens.join(", "),
+  },
+  { key: "instructionsForUse", label: "Warnings / instructions for use", scanField: "Warnings", read: (f) => f.instructionsForUse },
+  { key: "responsiblePerson", label: "Responsible Person (UK)", scanField: "Manufacturer / Responsible Person", read: (f) => f.responsiblePerson },
+  {
+    key: "euResponsiblePerson",
+    label: "Responsible Person (EU / NI)",
+    scanField: "Manufacturer / Responsible Person",
+    read: (f) => f.euResponsiblePerson,
+  },
+  { key: "countryOfOrigin", label: "Country of origin", scanField: "Country of Origin", read: (f) => f.countryOfOrigin },
+  { key: "netQuantity", label: "Net quantity", scanField: "Net Quantity", read: (f) => f.netQuantity },
+  { key: "batchNumber", label: "Batch / lot code", scanField: "Batch / Lot Number", read: (f) => f.batchNumber },
+  {
+    key: "date",
+    label: "Date mark / PAO",
+    scanField: "Expiry / Best Before",
+    read: (f) => (f.dateType === "pao" ? (f.paoMonths ? `PAO ${f.paoMonths}M` : "") : f.bestBefore),
+  },
+  { key: "storageInstructions", label: "Storage instructions", scanField: "Storage Instructions", read: (f) => f.storageInstructions },
+  { key: "allergens", label: "Allergens", scanField: "Allergens", read: (f) => f.allergens },
+];
+
+const oneLine = (s: string) => {
+  const flat = s.replace(/\s+/g, " ").trim();
+  return flat.length > 140 ? `${flat.slice(0, 137)}…` : flat;
+};
+
+const norm = (s: string) => s.replace(/\s+/g, " ").trim();
+
+export const diffAgainstScan = (
+  scanned: LabelFields,
+  draft: LabelFields,
+  findings: RuleFinding[]
+): LabelChange[] =>
+  CHANGE_FIELDS.flatMap(({ key, label, scanField, read }) => {
+    const before = norm(read(scanned));
+    const after = norm(read(draft));
+    if (before === after) return [];
+    // Findings are ranked (legal and action-needed first), so the first
+    // match is the most important reason for this field to change.
+    const finding = findings.find((f) => f.field === scanField && f.status !== "pass");
+    const reason = finding
+      ? oneLine(`${finding.title}: ${finding.fix ?? finding.reason}`)
+      : "Edited by you";
+    return [{ key, label, before, after, reason }];
+  });
