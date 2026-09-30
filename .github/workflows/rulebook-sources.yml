@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install beautifulsoup4
+      - run: pip install beautifulsoup4 lxml
 
       - name: Download the official texts
         run: scripts/rulebook/fetch_sources.sh "$RUNNER_TEMP/src"

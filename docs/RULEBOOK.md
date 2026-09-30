@@ -95,7 +95,7 @@ How matches are reported:
 ### Refreshing the data
 
 ```sh
-pip install beautifulsoup4
+pip install beautifulsoup4 lxml
 scripts/rulebook/fetch_sources.sh /tmp/rulebook-src                       # official texts + SHA-256 manifest
 python3 scripts/rulebook/parse_annexes.py eu /tmp/rulebook-src/eu_consolidated.html supabase/rulebook-data/eu
 python3 scripts/rulebook/parse_annexes.py gb /tmp/rulebook-src/gb supabase/rulebook-data/gb
