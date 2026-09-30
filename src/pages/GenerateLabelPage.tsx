@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Sparkles, Loader2, Download, QrCode, Share2, Copy } from "lucide-react";
+import { Sparkles, Loader2, Download, QrCode, Share2, Copy, Printer } from "lucide-react";
 import QRCode from "qrcode";
 import jsPDF from "jspdf";
 
@@ -53,6 +53,8 @@ import ComplianceCheck from "@/components/generator/ComplianceCheck";
 import ScanTodo from "@/components/generator/ScanTodo";
 import { diffAgainstScan, type LabelChange, type ScanHandoff } from "@/lib/scan-to-label";
 import ChangeReview from "@/components/generator/ChangeReview";
+import PrintDialog from "@/components/generator/PrintDialog";
+import { buildPrintPdf, loadFonts, type PrintSpec } from "@/lib/print-label";
 
 import { CATEGORIES } from "@/lib/categories";
 import LeadCaptureDialog, { hasSubmittedLead, getSignupId } from "@/components/LeadCaptureDialog";
@@ -96,6 +98,7 @@ const GenerateLabelPage = () => {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [approving, setApproving] = useState(false);
   const [approvedUrl, setApprovedUrl] = useState<string | null>(null);
+  const [printOpen, setPrintOpen] = useState(false);
   const [preview, setPreview] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [busyField, setBusyField] = useState<string | null>(null);
@@ -407,6 +410,25 @@ const GenerateLabelPage = () => {
     const filename =
       (fields.productName || "label").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
     doc.save(`${filename}-label.pdf`);
+  };
+
+  const handlePrintExport = async (spec: PrintSpec) => {
+    saveLabel().catch((e) => console.warn("label persist failed", e));
+    const fonts = await loadFonts();
+    const { doc, layout } = buildPrintPdf({
+      fields,
+      pack,
+      warnings: derivedWarnings,
+      spec,
+      fonts,
+      markets: pack === "cosmetic" ? markets : undefined,
+      findings: rulebookFindings,
+      rulebook: draftCheck?.rulebook ?? null,
+      builtInChecks: rulebookFindings ? undefined : rules.map((r) => ({ label: r.label, status: r.status })),
+    });
+    const filename = (fields.productName || "label").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    doc.save(`${filename}-print-${spec.widthMm}x${spec.heightMm}mm.pdf`);
+    return { fits: layout.fits, fontSizePt: layout.fontSizePt, minFontSizePt: layout.minFontSizePt };
   };
 
   // Field row with optional AI suggest button
@@ -1003,6 +1025,11 @@ const GenerateLabelPage = () => {
               <span className="text-[11px] leading-tight">Share</span>
             </Button>
           </div>
+          <Button className="w-full gap-2" onClick={() => requireLead(() => setPrintOpen(true))}>
+            <Printer className="h-4 w-4" />
+            Print-ready PDF
+          </Button>
+          <PrintDialog open={printOpen} onOpenChange={setPrintOpen} onExport={handlePrintExport} />
 
           <p className="text-[11px] text-muted-foreground">
             {DRAFT_LABEL_DISCLAIMER}
