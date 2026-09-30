@@ -44,6 +44,7 @@ interface FieldsIn {
   batchNumber?: string;
   bestBefore?: string;
   responsiblePerson?: string;
+  euResponsiblePerson?: string;
   certifications?: string;
   dateType?: "use_by" | "best_before" | "pao" | "durability" | "";
   storageInstructions?: string;
@@ -128,6 +129,7 @@ function contextBlock(fields: FieldsIn, pack: Pack): string {
   if (fields.storageInstructions) lines.push(`Storage: ${fields.storageInstructions}`);
   if (fields.instructionsForUse) lines.push(`Instructions for use: ${fields.instructionsForUse}`);
   if (fields.responsiblePerson) lines.push(`FBO / Responsible person: ${fields.responsiblePerson}`);
+  if (fields.euResponsiblePerson) lines.push(`EU / Northern Ireland Responsible person: ${fields.euResponsiblePerson}`);
   if (fields.certifications) lines.push(`Certifications: ${fields.certifications}`);
   if (fields.packagedProtectiveAtmosphere) lines.push("Packaged in a protective atmosphere.");
   if (fields.nano) lines.push("Contains engineered nanomaterials.");
@@ -191,7 +193,7 @@ Then labelled sections, each on its own paragraph, skipping empties:
 - Instructions for use / precautions: ...
 - Batch: ...
 - Country of origin: ...
-- Responsible person: ...
+- Responsible person: ... (if an EU / Northern Ireland Responsible person is also supplied, give it its own line after the UK one)
 - Certifications: ...
 British English. Concise, factual, retail-ready. Never invent fragrance allergens or a shelf-life type that wasn't supplied.`;
 

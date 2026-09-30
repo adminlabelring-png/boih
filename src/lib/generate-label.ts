@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { LabelFields, Pack } from "./label-rules";
 import { getSignupId } from "@/components/LeadCaptureDialog";
+import type { Market, RuleFinding, RulebookStamp } from "./scan-context";
 
 class GenerateLabelError extends Error {
   status?: number;
@@ -40,6 +41,38 @@ export async function suggestField(
   const value = (data as { value?: string })?.value;
   if (!value) throw new GenerateLabelError("No suggestion returned");
   return value;
+}
+
+export interface DraftCheck {
+  findings: RuleFinding[];
+  rulebook: RulebookStamp | null;
+}
+
+// Runs the label draft through the same versioned rulebook as scans.
+export async function checkDraft(fields: LabelFields, markets: Market[]): Promise<DraftCheck> {
+  const { data, error } = await supabase.functions.invoke("check-label", {
+    body: {
+      category: fields.category,
+      markets,
+      draft: {
+        productName: fields.productName,
+        ingredients: fields.ingredients,
+        responsiblePerson: fields.responsiblePerson,
+        euResponsiblePerson: fields.euResponsiblePerson,
+        countryOfOrigin: fields.countryOfOrigin,
+        netQuantity: fields.netQuantity,
+        batchNumber: fields.batchNumber,
+        bestBefore: fields.bestBefore,
+        dateType: fields.dateType,
+        paoMonths: fields.paoMonths,
+        instructionsForUse: fields.instructionsForUse,
+        storageInstructions: fields.storageInstructions,
+      },
+    },
+  });
+  if (error) throw await toGenerateLabelError(error);
+  const d = data as Partial<DraftCheck> | null;
+  return { findings: Array.isArray(d?.findings) ? d.findings : [], rulebook: d?.rulebook ?? null };
 }
 
 export async function generatePreview(

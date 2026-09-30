@@ -30,6 +30,9 @@ export interface LabelFields {
   batchNumber: string;
   bestBefore: string;
   responsiblePerson: string;
+  // Cosmetics sold in the EU or Northern Ireland need an EU/NI-established
+  // Responsible Person; a master label can carry both addresses.
+  euResponsiblePerson: string;
   certifications: string;
   // UK FIC extensions
   dateType: "" | "use_by" | "best_before" | "pao" | "durability";
@@ -58,6 +61,7 @@ export const emptyLabel: LabelFields = {
   batchNumber: "",
   bestBefore: "",
   responsiblePerson: "",
+  euResponsiblePerson: "",
   certifications: "",
   dateType: "",
   storageInstructions: "",

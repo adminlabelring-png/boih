@@ -40,7 +40,10 @@ import {
   EU_FRAGRANCE_ALLERGENS,
   FRAGRANCE_ALLERGEN_THRESHOLD,
 } from "@/lib/allergens";
-import { generatePreview, suggestField } from "@/lib/generate-label";
+import { checkDraft, generatePreview, suggestField, type DraftCheck } from "@/lib/generate-label";
+import RuleFindings from "@/components/RuleFindings";
+import { rulebookStampText, findingStatusLabel } from "@/lib/rule-findings";
+import type { Market } from "@/lib/scan-context";
 import { DRAFT_LABEL_DISCLAIMER } from "@/lib/disclaimer";
 import { supabase } from "@/integrations/supabase/client";
 import { getLeadId } from "@/lib/lead-tracker";
@@ -65,6 +68,12 @@ const NUTRITION_ROWS: { key: keyof NutritionTable; label: string; placeholder: s
   { key: "salt", label: "Salt", placeholder: "0.5g" },
 ];
 
+const MARKET_OPTIONS: { value: Market; label: string }[] = [
+  { value: "GB", label: "Great Britain" },
+  { value: "NI", label: "Northern Ireland" },
+  { value: "EU", label: "EU" },
+];
+
 const GenerateLabelPage = () => {
   useSeo({
     title: "Create a Product Label Checked Against UK Rules | Labelring",
@@ -80,6 +89,9 @@ const GenerateLabelPage = () => {
     () => (location.state as { fromScan?: ScanHandoff } | null)?.fromScan ?? null
   );
   const [fields, setFields] = useState<LabelFields>(() => scanHandoff?.fields ?? emptyLabel);
+  // Markets the master label must satisfy; each market's rules check it.
+  const [markets, setMarkets] = useState<Market[]>(() => scanHandoff?.rulebook?.markets ?? ["GB"]);
+  const [draftCheck, setDraftCheck] = useState<DraftCheck | null>(null);
   const [preview, setPreview] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [busyField, setBusyField] = useState<string | null>(null);
@@ -106,7 +118,13 @@ const GenerateLabelPage = () => {
     setFields((f) => ({ ...f, nutrition: { ...f.nutrition, [k]: v } }));
 
   const pack = useMemo(() => getPack(fields.category), [fields.category]);
-  const { score, rules } = useMemo(() => evaluateLabel(fields), [fields]);
+  const { score: fixedScore, rules } = useMemo(() => evaluateLabel(fields), [fields]);
+  // Cosmetics are checked by the versioned rulebook (same as scans); food
+  // and other packs still use the built-in checks.
+  const rulebookFindings = pack === "cosmetic" && draftCheck?.rulebook ? draftCheck.findings : null;
+  const score = rulebookFindings?.length
+    ? Math.round((rulebookFindings.filter((f) => f.status === "pass").length / rulebookFindings.length) * 100)
+    : fixedScore;
   const derivedWarnings = useMemo(() => deriveWarnings(fields), [fields]);
   const detectedAllergens = useMemo(
     () => findAllergensInText(fields.ingredients),
@@ -133,6 +151,26 @@ const GenerateLabelPage = () => {
     if (pack === "cosmetic") base.push("instructionsForUse");
     return base;
   }, [pack]);
+
+  // Debounced rulebook check for cosmetics (no AI, cheap): re-run as the
+  // draft or the chosen markets change.
+  useEffect(() => {
+    if (pack !== "cosmetic") {
+      setDraftCheck(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      checkDraft(fields, markets)
+        .then((r) => !cancelled && setDraftCheck(r))
+        .catch((e) => console.warn("rulebook check failed", e));
+    }, 800);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(fields), pack, markets.join(",")]);
 
   // Debounced preview generation — skips while a Suggest is in flight to avoid rate limits
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -216,6 +254,8 @@ const GenerateLabelPage = () => {
           batch_number: fields.batchNumber || null,
           best_before: fields.bestBefore || null,
           responsible_person: fields.responsiblePerson || null,
+          eu_responsible_person: fields.euResponsiblePerson || null,
+          markets: pack === "cosmetic" ? markets : null,
           certifications: fields.certifications || null,
           preview_text: preview || null,
           compliance_score: score,
@@ -315,7 +355,7 @@ const GenerateLabelPage = () => {
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 64, 120);
-    doc.text("AI Confidence", 14, y);
+    doc.text(rulebookFindings ? "Regulatory checks" : "Label checks", 14, y);
     y += 6;
     doc.setDrawColor(30, 64, 120);
     doc.line(14, y, w - 14, y);
@@ -323,19 +363,23 @@ const GenerateLabelPage = () => {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(40, 40, 40);
-    rules.forEach((r) => {
-      const mark =
-        r.status === "ok"
-          ? "VERIFIED"
-          : r.status === "review"
-          ? "NEEDS REVIEW"
-          : "NOT PROVIDED";
-      doc.text(`• ${r.label} — ${mark}`, 16, y);
-      y += 6;
-      if (y > 280) {
-        doc.addPage();
-        y = 20;
-      }
+    const checkLines = rulebookFindings
+      ? rulebookFindings.map(
+          (f) => `• ${f.title} (${f.severity === "legal" ? "legal" : "best practice"}) — ${findingStatusLabel(f.status)}`
+        )
+      : rules.map(
+          (r) => `• ${r.label} — ${r.status === "ok" ? "OK" : r.status === "review" ? "NEEDS REVIEW" : "NOT PROVIDED"}`
+        );
+    if (rulebookFindings && draftCheck?.rulebook) checkLines.push("", rulebookStampText(draftCheck.rulebook, rulebookFindings));
+    checkLines.forEach((line) => {
+      doc.splitTextToSize(line, w - 32).forEach((l: string) => {
+        doc.text(l, 16, y);
+        y += 6;
+        if (y > 276) {
+          doc.addPage();
+          y = 20;
+        }
+      });
     });
 
     doc.setFontSize(8);
@@ -792,6 +836,36 @@ const GenerateLabelPage = () => {
               Business &amp; certifications
             </h2>
             <div className="space-y-4">
+              {pack === "cosmetic" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Markets this label is for</Label>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Markets">
+                    {MARKET_OPTIONS.map((m) => {
+                      const active = markets.includes(m.value);
+                      return (
+                        <button
+                          key={m.value}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => {
+                            const next = active ? markets.filter((x) => x !== m.value) : [...markets, m.value];
+                            if (next.length) setMarkets(next);
+                          }}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                            active ? "border-primary bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-accent"
+                          )}
+                        >
+                          {m.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    One master label is checked against every market you pick.
+                  </p>
+                </div>
+              )}
               {withSuggest(
                 "responsiblePerson",
                 <Input
@@ -801,6 +875,16 @@ const GenerateLabelPage = () => {
                   onChange={(e) => set("responsiblePerson", e.target.value)}
                 />
               )}
+              {pack === "cosmetic" && (markets.includes("EU") || markets.includes("NI")) &&
+                withSuggest(
+                  "euResponsiblePerson",
+                  <Input
+                    id="euResponsiblePerson"
+                    placeholder="e.g. Pura BV, Keizersgracht 1, 1015 Amsterdam, Netherlands"
+                    value={fields.euResponsiblePerson}
+                    onChange={(e) => set("euResponsiblePerson", e.target.value)}
+                  />
+                )}
               {withSuggest(
                 "certifications",
                 <Input
@@ -827,12 +911,18 @@ const GenerateLabelPage = () => {
             <LivePreview preview={preview} loading={previewLoading} hasData={hasAnyData} pack={pack} />
           </section>
 
-          <section>
-            <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              AI Confidence · {pack.toUpperCase()}
-            </h2>
-            <ComplianceCheck rules={rules} />
-          </section>
+          {rulebookFindings && draftCheck?.rulebook ? (
+            <section>
+              <RuleFindings findings={rulebookFindings} rulebook={draftCheck.rulebook} />
+            </section>
+          ) : (
+            <section>
+              <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Label checks · {pack.toUpperCase()}
+              </h2>
+              <ComplianceCheck rules={rules} />
+            </section>
+          )}
 
           <div className="grid grid-cols-3 gap-2">
             <Button
@@ -927,6 +1017,7 @@ const FIELD_LABELS: Record<string, string> = {
   batchNumber: "Batch / lot code",
   bestBefore: "Date mark",
   responsiblePerson: "Responsible person / FBO (UK)",
+  euResponsiblePerson: "Responsible person (EU / Northern Ireland)",
   certifications: "Certifications",
   storageInstructions: "Storage instructions",
   quidPercent: "QUID declaration",
