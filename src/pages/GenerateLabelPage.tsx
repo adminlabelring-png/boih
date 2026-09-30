@@ -51,7 +51,8 @@ import { cn } from "@/lib/utils";
 import LivePreview from "@/components/generator/LivePreview";
 import ComplianceCheck from "@/components/generator/ComplianceCheck";
 import ScanTodo from "@/components/generator/ScanTodo";
-import type { ScanHandoff } from "@/lib/scan-to-label";
+import { diffAgainstScan, type LabelChange, type ScanHandoff } from "@/lib/scan-to-label";
+import ChangeReview from "@/components/generator/ChangeReview";
 
 import { CATEGORIES } from "@/lib/categories";
 import LeadCaptureDialog, { hasSubmittedLead, getSignupId } from "@/components/LeadCaptureDialog";
@@ -92,6 +93,9 @@ const GenerateLabelPage = () => {
   // Markets the master label must satisfy; each market's rules check it.
   const [markets, setMarkets] = useState<Market[]>(() => scanHandoff?.rulebook?.markets ?? ["GB"]);
   const [draftCheck, setDraftCheck] = useState<DraftCheck | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [approvedUrl, setApprovedUrl] = useState<string | null>(null);
   const [preview, setPreview] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [busyField, setBusyField] = useState<string | null>(null);
@@ -231,7 +235,14 @@ const GenerateLabelPage = () => {
       ? "text-[hsl(var(--risk-medium))]"
       : "text-[hsl(var(--risk-high))]";
 
-  const saveLabel = async (): Promise<string> => {
+  const scanChanges: LabelChange[] = useMemo(
+    () => (scanHandoff ? diffAgainstScan(scanHandoff.fields, fields, scanHandoff.findings) : []),
+    [scanHandoff, fields]
+  );
+
+  const saveLabel = async (
+    approval?: { sourceScanId: string | null; changes: LabelChange[] }
+  ): Promise<string> => {
     setSaving(true);
     try {
       const allergensToSave =
@@ -277,6 +288,13 @@ const GenerateLabelPage = () => {
             : null) as never,
           instructions_for_use: fields.instructionsForUse || null,
           signup_id: getSignupId(),
+          ...(approval
+            ? {
+                source_scan_id: approval.sourceScanId,
+                changes_from_scan: approval.changes as never,
+                approved_at: new Date().toISOString(),
+              }
+            : {}),
         })
         .select("id")
         .single();
@@ -441,7 +459,39 @@ const GenerateLabelPage = () => {
         </div>
       </div>
 
-      {scanHandoff && <ScanTodo handoff={scanHandoff} onDismiss={() => setScanHandoff(null)} />}
+      {scanHandoff && (
+        <>
+          <ScanTodo
+            handoff={scanHandoff}
+            onDismiss={() => setScanHandoff(null)}
+            changeCount={scanChanges.length}
+            approvedUrl={approvedUrl}
+            onReview={() => setReviewOpen(true)}
+          />
+          <ChangeReview
+            open={reviewOpen}
+            onOpenChange={setReviewOpen}
+            changes={scanChanges}
+            approving={approving}
+            onApprove={() =>
+              requireLead(async () => {
+                setApproving(true);
+                try {
+                  const url = await saveLabel({ sourceScanId: scanHandoff.scanId, changes: scanChanges });
+                  setApprovedUrl(url);
+                  setReviewOpen(false);
+                  toast.success("New version approved and saved.");
+                } catch (e) {
+                  console.error("approve failed", e);
+                  toast.error("Couldn't save the new version. Please try again.");
+                } finally {
+                  setApproving(false);
+                }
+              })
+            }
+          />
+        </>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[1fr,400px]">
         {/* LEFT: form */}
