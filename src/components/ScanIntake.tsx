@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Globe, Package, UserRound } from "lucide-react";
+import { Globe, Languages, Package, UserRound } from "lucide-react";
 import type { Market, PackFormat, Role, ScanOptions } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,12 @@ export const PACK_OPTIONS: { value: PackFormat; label: string; hint: string }[] 
   { value: "small", label: "Under 5 g / 5 ml", hint: "Mini or travel size" },
   { value: "sample", label: "Free sample or single use", hint: "Sachets, testers, single-application packs" },
   { value: "leaflet", label: "Too small for all the text", hint: "Some information is on an enclosed leaflet, tag or card" },
+];
+
+// EU countries whose language rules the rulebook covers.
+export const EU_COUNTRY_OPTIONS: { value: string; label: string; hint: string }[] = [
+  { value: "DE", label: "Germany", hint: "Label text in German" },
+  { value: "FR", label: "France", hint: "Label text in French" },
 ];
 
 const chip = (active: boolean) =>
@@ -68,6 +74,37 @@ const ScanIntake = ({ options, setOptions }: { options: ScanOptions; setOptions:
           ))}
         </div>
       </div>
+      {options.markets.includes("EU") && (
+        <div>
+          <div className="flex items-center gap-2">
+            <Languages className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium">Which EU countries?</p>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="EU countries">
+            {EU_COUNTRY_OPTIONS.map((c) => {
+              const active = options.countries.includes(c.value);
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() =>
+                    setOptions({
+                      ...options,
+                      countries: active ? options.countries.filter((x) => x !== c.value) : [...options.countries, c.value],
+                    })
+                  }
+                  className={chip(active)}
+                  title={c.hint}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">Each country decides the language the label must use.</p>
+        </div>
+      )}
       <div>
         <div className="flex items-center gap-2">
           <UserRound className="h-4 w-4 text-muted-foreground" />

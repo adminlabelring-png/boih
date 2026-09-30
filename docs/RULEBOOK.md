@@ -106,6 +106,17 @@ python3 scripts/rulebook/build_migration.py 2026.3 2026.2 supabase/migrations/<t
 
 The parser stops if any entry is dropped for a reason other than "deleted in the source". Review the diff of `supabase/rulebook-data/` (it shows exactly which entries changed), then commit. The new version is a draft until an admin signs it off and publishes it.
 
+## Label rules beyond the substance lists
+
+| Rule | What it checks | Source |
+| --- | --- | --- |
+| `product_function` | The pack says what the product is for, unless that's obvious from how it's presented. | Art. 19(1)(f) |
+| `eu_languages` | For each EU country chosen at intake, the pack has text in its language: German for Germany, French for France. This covers the function, precautions, date and nominal content; INCI names aren't translated. Add a country by adding it to the rule's `required` parameter and to the intake options. | Art. 19(5) |
+| `claims` | Claims such as "free from", "hypoallergenic", "dermatologically tested", "natural/organic", "chemical-free", medicinal wording and "cruelty-free", each with specific advice. It's always a "check", never a fail. | Reg. (EU) No 655/2013, common criteria |
+| Pack question | No nominal content needed under 5 g / 5 ml or on samples. Ingredients and precautions may go on a leaflet, tag or card when the pack shows the hand-in-book symbol. The batch number may go on the outer packaging only. | Art. 19(1)(b), 19(1)(e), 19(2) |
+
+The scanner reports the function, claims, languages and symbols it sees on the pack. For drafts in the label builder, the languages are detected from the text the brand typed.
+
 ## Source monitoring
 
 Every Monday, `pg_cron` checks the legal sources the rulebook cites (`source_watches`) and records any change in `source_change_alerts`, listing the rules and substances that cite that source. Nothing in the rulebook changes automatically.

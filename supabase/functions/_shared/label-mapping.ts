@@ -4,6 +4,7 @@
 // covered by vitest.
 
 import type { ExtractedField } from "./rule-engine.ts";
+import { detectLanguages } from "./language.ts";
 
 export interface LabelDraft {
   productName?: string;
@@ -18,6 +19,8 @@ export interface LabelDraft {
   paoMonths?: string;
   instructionsForUse?: string;
   storageInstructions?: string;
+  cosmeticProductType?: string;
+  certifications?: string;
 }
 
 const clean = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
@@ -47,5 +50,51 @@ export const draftToExtracted = (d: LabelDraft): ExtractedField[] => {
     field("Expiry / Best Before", date),
     field("Net Quantity", clean(d.netQuantity)),
     field("Storage Instructions", clean(d.storageInstructions)),
+    // What the product is for, as its name usually says (e.g. "Rose Face
+    // Cream"); the rule asks for a check when there's no name.
+    field("Product Function", clean(d.productName)),
+    // Claims can appear anywhere the brand writes free text.
+    field("Claims", [clean(d.productName), clean(d.instructionsForUse), clean(d.certifications)].filter(Boolean).join("; ")),
+    {
+      label: "Label Languages",
+      value:
+        detectLanguages(
+          [d.productName, d.instructionsForUse, d.storageInstructions].map(clean).join(". ")
+        ).join(", ") || "none",
+      status: "verified",
+    },
+  ];
+};
+
+// What the scanner reports beyond the per-field transcription: the
+// product's stated function, marketing claims, the languages on the pack
+// and symbols such as the hand-in-book. Used only by the rules, not shown
+// as fields.
+export interface ScanExtras {
+  function?: string | null;
+  claims?: string[] | null;
+  languages?: string[] | null;
+  symbols?: string[] | null;
+}
+
+export const extrasToFields = (extras: ScanExtras | null | undefined, coverageComplete: boolean): ExtractedField[] => {
+  // Something the scanner didn't see may be on a side it wasn't shown.
+  const absent = coverageComplete ? "missing" : "not_verified";
+  const list = (v: unknown) =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "").map((x) => x.trim()) : [];
+  const fn = clean(extras?.function);
+  const claims = list(extras?.claims);
+  const languages = list(extras?.languages).map((l) => l.toLowerCase().slice(0, 2));
+  const symbols = list(extras?.symbols).map((x) => x.toLowerCase());
+  return [
+    fn ? { label: "Product Function", value: fn, status: "verified" } : { label: "Product Function", value: null, status: absent },
+    claims.length ? { label: "Claims", value: claims.join("; "), status: "verified" } : { label: "Claims", value: null, status: absent },
+    {
+      label: "Label Languages",
+      value: languages.join(", ") || "none",
+      // A language missing from what was seen may be on an unseen side.
+      status: coverageComplete ? "verified" : "low_confidence",
+    },
+    { label: "Pack Symbols", value: symbols.join(", ") || "none", status: coverageComplete ? "verified" : "low_confidence" },
   ];
 };

@@ -28,7 +28,10 @@ const json = (body: unknown, status = 200) =>
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const { draft, category, markets: rawMarkets, role, pack } = await req.json();
+    const { draft, category, markets: rawMarkets, role, pack, countries: rawCountries } = await req.json();
+    const countries: string[] = Array.isArray(rawCountries)
+      ? [...new Set(rawCountries.filter((c): c is string => typeof c === "string" && /^[A-Z]{2}$/.test(c)))]
+      : [];
     const requested: Market[] = Array.isArray(rawMarkets) ? [...new Set(rawMarkets.filter(isMarket))] : [];
     const markets = requested.length ? requested : DEFAULT_MARKETS;
 
@@ -45,6 +48,7 @@ Deno.serve(async (req) => {
         markets,
         role: isRole(role) ? role : null,
         pack: isPackFormat(pack) ? pack : null,
+        countries,
       },
       rulebook
     );
@@ -54,6 +58,7 @@ Deno.serve(async (req) => {
       status: rulebook.status,
       markets,
       pack: isPackFormat(pack) ? pack : null,
+      countries,
       checkedAt: new Date().toISOString(),
     };
     return json({ findings, rulebook: stamp });

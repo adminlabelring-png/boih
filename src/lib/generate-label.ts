@@ -52,13 +52,15 @@ export interface DraftCheck {
 export async function checkDraft(
   fields: LabelFields,
   markets: Market[],
-  packFormat: PackFormat | null = null
+  packFormat: PackFormat | null = null,
+  countries: string[] = []
 ): Promise<DraftCheck> {
   const { data, error } = await supabase.functions.invoke("check-label", {
     body: {
       category: fields.category,
       markets,
       pack: packFormat,
+      countries,
       draft: {
         productName: fields.productName,
         ingredients: fields.ingredients,
@@ -72,6 +74,7 @@ export async function checkDraft(
         paoMonths: fields.paoMonths,
         instructionsForUse: fields.instructionsForUse,
         storageInstructions: fields.storageInstructions,
+        certifications: fields.certifications,
       },
     },
   });

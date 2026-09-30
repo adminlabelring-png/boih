@@ -70,8 +70,10 @@ export interface ScanOptions {
   // rule engine so only the relevant markets' rules are checked.
   markets: Market[];
   role: Role | null;
-  // What it's packed in: decides the Article 19 small-pack exemptions.
+  // What it's packed in: decides the Article 19 small-pack rules.
   pack: PackFormat | null;
+  // EU countries it's sold in (e.g. DE, FR): each sets the label language.
+  countries: string[];
 }
 
 interface ScanContextType {
@@ -84,7 +86,14 @@ interface ScanContextType {
   reset: () => void;
 }
 
-const defaultOptions: ScanOptions = { isSeasonal: false, seasonTag: null, markets: ["GB"], role: null, pack: null };
+const defaultOptions: ScanOptions = {
+  isSeasonal: false,
+  seasonTag: null,
+  markets: ["GB"],
+  role: null,
+  pack: null,
+  countries: [],
+};
 
 const ScanContext = createContext<ScanContextType | null>(null);
 
