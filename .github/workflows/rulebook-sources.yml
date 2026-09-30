@@ -1,0 +1,80 @@
+name: Check official rulebook sources
+
+# Weekly: re-downloads the official GB and EU texts of the Cosmetics
+# Regulation's Annexes II-VI and the CosIng INCI links, re-parses them and
+# compares with the data in supabase/rulebook-data. If any entry changed,
+# opens a draft PR listing exactly what changed (entry by entry, field by
+# field) with a new draft rulebook version for admins to review in
+# /admin/leads -> Rulebook. Nothing reaches users until that version is
+# signed off and published.
+
+on:
+  schedule:
+    - cron: "30 7 * * 1" # Mondays 07:30 UTC, after the database source monitor
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install beautifulsoup4
+
+      - name: Download the official texts
+        run: scripts/rulebook/fetch_sources.sh "$RUNNER_TEMP/src"
+
+      - name: Parse
+        run: |
+          cp -r supabase/rulebook-data "$RUNNER_TEMP/old"
+          python3 scripts/rulebook/parse_annexes.py eu "$RUNNER_TEMP/src/eu_consolidated.html" supabase/rulebook-data/eu
+          python3 scripts/rulebook/parse_annexes.py gb "$RUNNER_TEMP/src/gb" supabase/rulebook-data/gb
+          cp "$RUNNER_TEMP/src/sources.json" supabase/rulebook-data/sources.json
+          python3 scripts/rulebook/fetch_cosing.py supabase/rulebook-data/cosing_links.json
+
+      - name: Compare with the current data
+        id: diff
+        run: |
+          set +e
+          python3 scripts/rulebook/diff_data.py "$RUNNER_TEMP/old" supabase/rulebook-data "$RUNNER_TEMP/summary.md"
+          code=$?
+          set -e
+          if [ "$code" = 3 ]; then echo "changed=true" >> "$GITHUB_OUTPUT";
+          elif [ "$code" = 0 ]; then echo "changed=false" >> "$GITHUB_OUTPUT";
+          else exit "$code"; fi
+
+      - name: Open a PR with a new draft rulebook version
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -r VERSION FROM FILE < <(python3 scripts/rulebook/next_version.py)
+          python3 scripts/rulebook/build_migration.py "$VERSION" "$FROM" "supabase/migrations/$FILE"
+          BRANCH="rulebook/sources-$(date -u +%Y-%m-%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add supabase/rulebook-data "supabase/migrations/$FILE"
+          git commit -m "Official annex changes: draft rulebook $VERSION"
+          git push -u origin "$BRANCH"
+          {
+            cat "$RUNNER_TEMP/summary.md"
+            echo
+            echo "Merging adds draft rulebook **$VERSION** (cloned from $FROM; unchanged entries keep their sign-off)."
+            echo "Review and publish it in /admin/leads → Rulebook."
+          } > "$RUNNER_TEMP/body.md"
+          # Opening a PR needs "Allow GitHub Actions to create pull requests"
+          # in the repository settings; fall back to an issue without it.
+          gh pr create --draft --base main --head "$BRANCH" \
+            --title "Official annex changes: draft rulebook $VERSION" --body-file "$RUNNER_TEMP/body.md" \
+          || gh issue create --title "Official annex changes found (draft rulebook $VERSION)" \
+            --body "$(cat "$RUNNER_TEMP/body.md"; echo; echo "Branch with the changes: \`$BRANCH\`")"
