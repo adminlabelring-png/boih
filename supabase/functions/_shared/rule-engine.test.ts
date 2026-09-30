@@ -3,6 +3,7 @@ import {
   evaluateRules,
   rankFindings,
   type ExtractedField,
+  type PackFormat,
   type Rule,
   type Rulebook,
   type Substance,
@@ -262,5 +263,48 @@ describe("evaluateRules", () => {
     const f = byKey(evaluateRules({ fields: compliantUkLabel, category: "Cosmetic", markets: ["GB"] }, signed));
     expect(f.batch.verified).toBe(true);
     expect(f.inci.verified).toBe(false);
+  });
+});
+
+describe("pack-size exemptions (Article 19)", () => {
+  const packRulebook: Rulebook = {
+    scope: "cosmetics",
+    version: "pack.1",
+    status: "draft",
+    rules: [
+      rule({
+        rule_key: "content",
+        check_type: "present_with_unit",
+        field: "Net Quantity",
+        params: { not_required_for_pack: ["small", "sample"], not_required_note: "Not required on packs under 5 g or 5 ml." },
+      }),
+      rule({
+        rule_key: "inci",
+        check_type: "ingredient_list",
+        field: "Ingredients",
+        params: { leaflet_allowed_for_pack: ["leaflet", "small", "sample"], leaflet_note: "May be on an enclosed leaflet." },
+      }),
+    ],
+    substances: [],
+  };
+  const missing = [field("Net Quantity", null, "missing"), field("Ingredients", null, "missing")];
+  const run = (pack: PackFormat | null) =>
+    byKey(evaluateRules({ fields: missing, category: "Cosmetic", markets: ["GB"], pack }, packRulebook));
+
+  it("doesn't require nominal content on a small pack", () => {
+    expect(run("small").content.status).toBe("pass");
+    expect(run("small").content.reason).toContain("5 g");
+  });
+
+  it("allows ingredients on a leaflet for packs too small for them", () => {
+    expect(run("leaflet").inci.status).toBe("review");
+    expect(run("leaflet").inci.reason).toContain("leaflet");
+  });
+
+  it("still fails missing information on a normal pack, or when the pack wasn't given", () => {
+    for (const pack of ["carton", null] as const) {
+      expect(run(pack).content.status).toBe("fail");
+      expect(run(pack).inci.status).toBe("fail");
+    }
   });
 });
