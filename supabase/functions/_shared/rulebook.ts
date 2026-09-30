@@ -2,13 +2,37 @@
 // version if there is one, otherwise the latest draft (whose results the
 // app labels provisional).
 
-import type { Rulebook } from "./rule-engine.ts";
+import type { Rulebook, Substance } from "./rule-engine.ts";
 import { serviceClient } from "./quota.ts";
 
 // The rulebook changes rarely (a new version is a reviewed, published
 // event), so cache it per warm instance rather than query on every call.
 const RULEBOOK_TTL_MS = 5 * 60 * 1000;
 const rulebookCache = new Map<string, { at: number; rulebook: Rulebook | null }>();
+
+const SUBSTANCE_COLUMNS =
+  "list_type, inci_name, synonyms, markets, verification_status, jurisdiction, annex_ref, chemical_name, " +
+  "match_terms, colour_index, product_type, max_concentration, other_conditions, label_warnings, " +
+  "applies_from, sell_through_until";
+
+// The official annexes run to thousands of entries; the API returns at
+// most 1,000 rows per request.
+async function loadSubstances(db: ReturnType<typeof serviceClient>, versionId: string): Promise<Substance[]> {
+  const pageSize = 1000;
+  const all: Substance[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await db
+      .from("substances")
+      .select(SUBSTANCE_COLUMNS)
+      .eq("rulebook_version_id", versionId)
+      .neq("verification_status", "rejected")
+      .order("id")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    all.push(...((data ?? []) as unknown as Substance[]));
+    if (!data || data.length < pageSize) return all;
+  }
+}
 
 export async function loadRulebook(scope: "cosmetics"): Promise<Rulebook | null> {
   const cached = rulebookCache.get(scope);
@@ -36,20 +60,16 @@ export async function loadRulebook(scope: "cosmetics"): Promise<Rulebook | null>
       .from("rules")
       .select("rule_key, title, product_scope, markets, field, check_type, params, severity, explanation, fix_hint, sources, verification_status")
       .eq("rulebook_version_id", current.id),
-    db
-      .from("substances")
-      .select("list_type, inci_name, synonyms, markets, verification_status")
-      .eq("rulebook_version_id", current.id),
+    loadSubstances(db, current.id),
   ]);
   if (rules.error) throw rules.error;
-  if (substances.error) throw substances.error;
 
   const rulebook: Rulebook = {
     scope,
     version: current.version,
     status: current.status,
     rules: rules.data ?? [],
-    substances: substances.data ?? [],
+    substances,
   };
   rulebookCache.set(scope, { at: Date.now(), rulebook });
   return rulebook;

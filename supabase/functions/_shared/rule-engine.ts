@@ -24,6 +24,8 @@ export type CheckType =
   | "ingredient_list"
   | "fragrance_allergens"
   | "prohibited_substances"
+  | "restricted_substances"
+  | "colourants"
   | "advisory";
 
 export interface RuleSource {
@@ -48,12 +50,35 @@ export interface Rule {
   verification_status: VerificationStatus;
 }
 
+export type SubstanceList =
+  | "fragrance_allergen"
+  | "prohibited"
+  | "restricted"
+  | "colourant"
+  | "preservative"
+  | "uv_filter";
+
 export interface Substance {
-  list_type: "fragrance_allergen" | "prohibited";
+  list_type: SubstanceList;
   inci_name: string;
+  // Other official names (INCI, chemical names, CI numbers).
   synonyms: string[];
   markets: Market[];
   verification_status: VerificationStatus;
+  // Official annex entries (null/absent for hand-entered rows).
+  jurisdiction?: "GB" | "EU" | null;
+  annex_ref?: string | null;
+  chemical_name?: string | null;
+  // Names derived from the official ones ("X" from "X and its salts"):
+  // a match only ever asks for a check.
+  match_terms?: string[];
+  colour_index?: string[];
+  product_type?: string | null;
+  max_concentration?: string | null;
+  other_conditions?: string | null;
+  label_warnings?: string | null;
+  applies_from?: string | null;
+  sell_through_until?: string | null;
 }
 
 export interface Rulebook {
@@ -97,6 +122,8 @@ export interface EvaluationInput {
   category: string;
   markets: Market[];
   role?: Role | null;
+  // For date-dependent entries (e.g. new allergens from 1 August 2026).
+  today?: string;
 }
 
 export const ALL_MARKETS: Market[] = ["GB", "NI", "EU"];
@@ -122,11 +149,20 @@ export const rulebookScopeForCategory = (category: string | null | undefined): "
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // Case-insensitive whole-term match, so "Citral" doesn't match inside
-// "Citronellol" and "Benzyl Alcohol" doesn't match inside a longer name.
+// "Citronellol", "Benzyl Alcohol" doesn't match inside a longer name, and
+// "Benzophenone" doesn't match "Benzophenone-3".
+const termPatterns = new Map<string, RegExp>();
+const termPattern = (term: string): RegExp => {
+  const key = term.toLowerCase();
+  let re = termPatterns.get(key);
+  if (!re) {
+    re = new RegExp(`(^|[^a-z0-9-])${escapeRegExp(key)}($|[^a-z0-9-]|-(?![a-z0-9]))`, "i");
+    termPatterns.set(key, re);
+  }
+  return re;
+};
 const containsTerm = (haystack: string, term: string): boolean =>
-  new RegExp(`(^|[^a-z0-9])${escapeRegExp(term.toLowerCase())}($|[^a-z0-9])`, "i").test(
-    haystack.toLowerCase()
-  );
+  term.trim().length >= 3 && termPattern(term).test(haystack.toLowerCase());
 
 const UK_POSTCODE = /\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/i;
 const NI_POSTCODE = /\bBT\d{1,2}\s*\d[A-Z]{2}\b/i;
@@ -174,6 +210,32 @@ interface CheckContext {
   substances: Substance[];
 }
 
+const officialNames = (s: Substance) => [s.inci_name, ...s.synonyms];
+
+const namedIn = (value: string, s: Substance) => officialNames(s).some((n) => containsTerm(value, n));
+
+// The name as it appears on the label, for the finding text.
+// plus the listed name when the label uses another one.
+const nameOnLabel = (value: string, s: Substance) => {
+  const found = [...officialNames(s), ...(s.match_terms ?? [])].find((n) => containsTerm(value, n)) ?? s.inci_name;
+  return found.toLowerCase() === s.inci_name.toLowerCase() ? found : `${found} (${s.inci_name})`;
+};
+
+const clip = (text: string, max = 300) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
+
+const where = (s: Substance) =>
+  s.annex_ref ? ` (${s.jurisdiction === "GB" ? "GB" : "EU"} Annex ${s.annex_ref.replace("/", ", entry ")})` : "";
+
+const listFor = (substances: Substance[], type: SubstanceList, markets: Market[]) =>
+  substances.filter((s) => s.list_type === type && inMarkets(s.markets, markets));
+
+// One line per substance, without repeating a name found under both the
+// GB and EU lists.
+const describe = (found: Substance[], line: (s: Substance) => string): string =>
+  [...new Set(found.map(line))].join(" ");
+
+const CI_NUMBER = /\bC\.?\s?I\.?\s?(\d{5})\b/gi;
+
 const inMarkets = (itemMarkets: Market[], markets: Market[]) =>
   itemMarkets.some((m) => markets.includes(m));
 
@@ -218,13 +280,9 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
       : { status: "review", reason: "The ingredient list looks incomplete." },
 
   fragrance_allergens: ({ rule, value, markets, substances }) => {
-    const allergens = substances.filter(
-      (s) => s.list_type === "fragrance_allergen" && inMarkets(s.markets, markets)
-    );
-    const named = allergens.filter((s) =>
-      [s.inci_name, ...s.synonyms].some((n) => containsTerm(value, n))
-    );
-    const namedLower = new Set(named.map((s) => s.inci_name.toLowerCase()));
+    const allergens = listFor(substances, "fragrance_allergen", markets);
+    const named = allergens.filter((s) => namedIn(value, s));
+    const namedLower = new Set(named.flatMap((s) => officialNames(s).map((n) => n.toLowerCase())));
 
     const sources = (rule.params.natural_sources ?? {}) as Record<string, string[]>;
     const undeclared = new Map<string, string[]>();
@@ -255,24 +313,103 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
     return {
       status: "pass",
       reason: named.length
-        ? `Declared: ${named.map((s) => s.inci_name).join(", ")}.`
+        ? `Declared: ${[...new Set(named.map((s) => s.inci_name))].join(", ")}.`
         : "No fragrance or allergen-bearing essential oils listed.",
     };
   },
 
   prohibited_substances: ({ value, markets, substances }) => {
-    const prohibited = substances.filter(
-      (s) => s.list_type === "prohibited" && inMarkets(s.markets, markets)
+    const prohibited = listFor(substances, "prohibited", markets);
+    // An official name without an exception is a fail; a name derived
+    // from one, or an entry with an exception, asks for a check.
+    const certain = prohibited.filter((s) => !s.other_conditions && namedIn(value, s));
+    const possible = prohibited.filter(
+      (s) =>
+        !certain.includes(s) &&
+        (namedIn(value, s) || (s.match_terms ?? []).some((t) => containsTerm(value, t)))
     );
-    const found = prohibited.filter((s) =>
-      [s.inci_name, ...s.synonyms].some((n) => containsTerm(value, n))
+    const official = prohibited.some((s) => s.annex_ref);
+    if (certain.length) {
+      return {
+        status: "fail",
+        reason: `Contains a prohibited substance: ${describe(certain, (s) => `${nameOnLabel(value, s)}${where(s)}.`)}`,
+      };
+    }
+    if (possible.length) {
+      return {
+        status: "review",
+        reason: `May contain a prohibited substance; check against the entry: ${describe(
+          possible,
+          (s) => `${nameOnLabel(value, s)} — listed as "${clip(s.chemical_name ?? s.inci_name, 200)}"${where(s)}.`
+        )}`,
+      };
+    }
+    return {
+      status: "pass",
+      reason: official
+        ? `None of the ${prohibited.length} entries on the prohibited list were found by name.`
+        : `None of the ${prohibited.length} prohibited substances in this rulebook were found. This is not a full Annex II screen.`,
+    };
+  },
+
+  restricted_substances: ({ value, markets, substances }) => {
+    const listed = substances.filter(
+      (s) =>
+        (s.list_type === "restricted" || s.list_type === "preservative" || s.list_type === "uv_filter") &&
+        inMarkets(s.markets, markets)
     );
-    return found.length
-      ? { status: "fail", reason: `Contains a prohibited substance: ${found.map((s) => s.inci_name).join(", ")}.` }
-      : {
-          status: "pass",
-          reason: `None of the ${prohibited.length} prohibited substances in this rulebook were found. This is not a full Annex II screen.`,
-        };
+    const found = listed.filter((s) => namedIn(value, s));
+    if (!found.length) {
+      return { status: "pass", reason: `None of the ${listed.length} restricted ingredients were found.` };
+    }
+    const kind = { restricted: "Restricted", preservative: "Preservative", uv_filter: "UV filter" } as Record<string, string>;
+    const lines = describe(found, (s) => {
+      const parts = [
+        s.product_type && `product types: ${clip(s.product_type)}`,
+        s.max_concentration && `maximum: ${clip(s.max_concentration)}`,
+        s.other_conditions && `conditions: ${clip(s.other_conditions)}`,
+        s.label_warnings && `required on the label: ${clip(s.label_warnings, 500)}`,
+      ].filter(Boolean);
+      return `${nameOnLabel(value, s)} — ${kind[s.list_type]}${where(s)}${parts.length ? `: ${parts.join("; ")}` : ""}.`;
+    });
+    const warnings = found.some((s) => s.label_warnings);
+    return {
+      status: "review",
+      reason: `${warnings ? "Check the required warnings and limits" : "Allowed within limits; check them"}: ${lines}`,
+    };
+  },
+
+  colourants: ({ value, markets, substances }) => {
+    const permitted = listFor(substances, "colourant", markets);
+    const used = [...new Set([...value.matchAll(CI_NUMBER)].map((m) => m[1]))];
+    if (!used.length) return { status: "pass", reason: "No colourants (CI numbers) listed." };
+    if (!permitted.length) return null;
+    const byNumber = new Map<string, Substance[]>();
+    for (const s of permitted) {
+      for (const ci of s.colour_index ?? []) byNumber.set(ci, [...(byNumber.get(ci) ?? []), s]);
+    }
+    const unknown = used.filter((ci) => !byNumber.has(ci));
+    if (unknown.length) {
+      return {
+        status: "fail",
+        reason: `Not on the permitted colourant list: ${unknown.map((ci) => `CI ${ci}`).join(", ")}.`,
+      };
+    }
+    // Where it may be used matters for the label; purity criteria are the
+    // manufacturer's concern.
+    const conditional = used
+      .flatMap((ci) => byNumber.get(ci)!)
+      .filter((s) => s.product_type || /not to be used|only|except|maximum|must not/i.test(s.other_conditions ?? ""));
+    if (conditional.length) {
+      return {
+        status: "review",
+        reason: `Permitted with conditions: ${describe(
+          conditional,
+          (s) => `${s.inci_name}${where(s)}: ${clip([s.product_type, s.other_conditions].filter(Boolean).join("; "))}.`
+        )}`,
+      };
+    }
+    return { status: "pass", reason: `All ${used.length} colourants are on the permitted list.` };
   },
 
   advisory: ({ rule, value }) => {
@@ -378,7 +515,10 @@ export const evaluateRules = (input: EvaluationInput, rulebook: Rulebook): RuleF
   const markets = input.markets.length ? input.markets : DEFAULT_MARKETS;
   const role = input.role ?? null;
   const fieldsByLabel = new Map(input.fields.map((f) => [f.label, f]));
-  const substances = rulebook.substances.filter((s) => s.verification_status !== "rejected");
+  const today = input.today ?? new Date().toISOString().slice(0, 10);
+  const substances = rulebook.substances.filter(
+    (s) => s.verification_status !== "rejected" && (!s.applies_from || s.applies_from <= today)
+  );
 
   const findings = rulebook.rules
     .filter((r) => r.verification_status !== "rejected")

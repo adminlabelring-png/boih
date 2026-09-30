@@ -1,0 +1,39 @@
+{
+ "eu_consolidated": {
+  "celex": "02009R1223-20260518",
+  "url": "http://publications.europa.eu/resource/celex/02009R1223-20260518",
+  "sha256": "b17993ae2a05962e1746145bd7c61d55f950af7afc0d434785d279f526c2256b"
+ },
+ "eu_2023_1545": {
+  "celex": "32023R1545",
+  "url": "http://publications.europa.eu/resource/celex/32023R1545",
+  "sha256": "26f767f196826cd364d8096717a016354548c26a5fd5813b493d0ae0ce4dd6ba"
+ },
+ "gb_annexes": {
+  "II": {
+   "url": "https://www.legislation.gov.uk/eur/2009/1223/annex/II/data.xml",
+   "valid_from": "2026-08-15",
+   "sha256": "d7cae9006ddc66883d5159e2d40334a6130701a434c44912c910b2a766eb2c63"
+  },
+  "III": {
+   "url": "https://www.legislation.gov.uk/eur/2009/1223/annex/III/data.xml",
+   "valid_from": "2026-08-15",
+   "sha256": "ae01f74dbf88c5b5c19e33ca89d15c7d3eb980b6692f54672f06956042f93433"
+  },
+  "IV": {
+   "url": "https://www.legislation.gov.uk/eur/2009/1223/annex/IV/data.xml",
+   "valid_from": "2026-08-15",
+   "sha256": "c89d0eb04b2b6248c964982ac80b2978fdc2c049ef95e5ef5a5e5a0ddc08d2e9"
+  },
+  "V": {
+   "url": "https://www.legislation.gov.uk/eur/2009/1223/annex/V/data.xml",
+   "valid_from": "2026-08-15",
+   "sha256": "abf33781dc9d019c288bb8c847edf4df15ec01eb7719a23f0124fe350139286d"
+  },
+  "VI": {
+   "url": "https://www.legislation.gov.uk/eur/2009/1223/annex/VI/data.xml",
+   "valid_from": "2026-08-15",
+   "sha256": "16323dd6b8e511cc88feac74f1ac71c3c8475f2ccd32d313c2333401cc14ce7d"
+  }
+ }
+}

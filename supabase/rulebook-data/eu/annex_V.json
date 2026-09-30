@@ -1,0 +1,1195 @@
+[
+ {
+  "annex": "V",
+  "ref": "1",
+  "chemical_name": "Benzoic acid and its sodium salt",
+  "inci": [
+   "Benzoic acid",
+   "Sodium Benzoate"
+  ],
+  "cas": [
+   "65-85-0",
+   "532-32-1"
+  ],
+  "product_type": [
+   "Rinse-off products, except oral products",
+   "Oral products",
+   "Leave-on products"
+  ],
+  "max_concentration": [
+   "2,5 % (acid)",
+   "1,7 % (acid)",
+   "0,5 % (acid)"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "1a",
+  "chemical_name": "Salts of benzoic acid other than that listed under reference number 1 and esters of benzoic acid",
+  "inci": [
+   "Ammonium benzoate",
+   "calcium benzoate",
+   "potassium benzoate",
+   "magnesium benzoate",
+   "MEA-benzoate",
+   "methyl benzoate",
+   "ethyl benzoate",
+   "propyl benzoate",
+   "butyl benzoate",
+   "isobutyl benzoate",
+   "isopropyl benzoate",
+   "phenyl benzoate"
+  ],
+  "cas": [
+   "1863-63-4",
+   "2090-05-3",
+   "582-25-2",
+   "553-70-8",
+   "4337-66-0",
+   "93-58-3",
+   "93-89-0",
+   "2315-68-6",
+   "136-60-7",
+   "120-50-3",
+   "939-48-0",
+   "93-99-2"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,5 % (acid)"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "2",
+  "chemical_name": "Propionic acid and its salts",
+  "inci": [
+   "Propionic acid",
+   "ammonium propionate",
+   "calcium propionate",
+   "magnesium propionate",
+   "potassium propionate",
+   "sodium propionate"
+  ],
+  "cas": [
+   "79-09-4",
+   "17496-08-1",
+   "4075-81-4",
+   "557-27-7",
+   "327-62-8",
+   "137-40-6"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "2 % (acid)"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "3",
+  "chemical_name": "Salicylic acid and its salts",
+  "inci": [
+   "Salicylic acid",
+   "Calcium salicylate",
+   "magnesium salicylate",
+   "MEA- salicylate",
+   "sodium salicylate",
+   "potassium salicylate",
+   "TEA- salicylate"
+  ],
+  "cas": [
+   "69-72-7",
+   "824-35-1",
+   "18917-89-0",
+   "54-21-7",
+   "578-36-9",
+   "2174-16-5"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,5 % (acid)"
+  ],
+  "other": [
+   "Not to be used in products for children under 3 years of age.",
+   "Not to be used in oral products.",
+   "Not to be used in applications that may lead to exposure of the end-user’s lungs by inhalation.",
+   "Not to be used in products for children under 3 years of age, except for shampoos."
+  ],
+  "warnings": [
+   "Not to be used for children under 3 years of age"
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "4",
+  "chemical_name": "Hexa-2,4-dienoic acid and its salts",
+  "inci": [
+   "Sorbic acid",
+   "calcium sorbate",
+   "sodium sorbate",
+   "potassium sorbate"
+  ],
+  "cas": [
+   "110-44-1",
+   "7492-55-9",
+   "7757-81-5",
+   "24634-61-5"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,6 % (acid)"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "7",
+  "chemical_name": "Biphenyl-2-ol; 2-phenylphenol; 2-hydroxybiphenyl Sodium 2-biphenylate",
+  "inci": [
+   "o-Phenylphenol",
+   "Sodium o-Phenylphenate"
+  ],
+  "cas": [
+   "90-43-7",
+   "132-27-4"
+  ],
+  "product_type": [
+   "(a) Rinse-off products (b) Leave-on products"
+  ],
+  "max_concentration": [
+   "(a) 0,2 % (as phenol (b) 0,15 % (as phenol)"
+  ],
+  "other": [
+   "When o-Phenylphenol and Sodium o-Phenylphenate are used together, the combined concentration (as phenol) shall not exceed 0,2 % in rinse-off and 0,15 % in leave-on products. Not to be used in applications that may lead to exposure of the end-user’s lungs by inhalation. Not to be used in oral products."
+  ],
+  "warnings": [
+   "Avoid contact with eyes"
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "9",
+  "chemical_name": "Inorganic sulphites and hydrogen- sulphites",
+  "inci": [
+   "Sodium sulfite",
+   "ammonium bisulfite",
+   "ammonium sulfite",
+   "potassium sulfite",
+   "potassium hydrogen sulfite",
+   "sodium bisulfite",
+   "sodium metabisulfite",
+   "potassium metabisulfite"
+  ],
+  "cas": [
+   "7757-83-7",
+   "10192-30-0",
+   "10196-04-0",
+   "10117-38-1",
+   "7773-03-7",
+   "7631-90-5",
+   "7681-57-4",
+   "16731-55-8"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,2 % (as free SO2)"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "11",
+  "chemical_name": "Chlorobutanol",
+  "inci": [
+   "Chlorobutanol"
+  ],
+  "cas": [
+   "57-15-8"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,5 %"
+  ],
+  "other": [
+   "Not to be used in aerosol dispensers (sprays)"
+  ],
+  "warnings": [
+   "Contains Chlorobutanol"
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "12",
+  "chemical_name": "4-Hydroxybenzoic acid and its Methyl- and Ethyl-esters, and their salts",
+  "inci": [
+   "4-Hydroxybenzoic acid",
+   "methylparaben",
+   "potassium ethylparaben",
+   "potassium paraben",
+   "sodium methylparaben",
+   "sodium ethylparaben",
+   "ethylparaben",
+   "sodium paraben",
+   "potassium methylparaben",
+   "calcium paraben"
+  ],
+  "cas": [
+   "99-96-7",
+   "99-76-3",
+   "36457-19-9",
+   "16782-08-4",
+   "5026-62-0",
+   "35285-68-8",
+   "120-47-8",
+   "114-63-6",
+   "26112-07-2",
+   "69959-44-0"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,4 % (as acid) for single ester 0,8 % (as acid) for mixtures of esters"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "12a",
+  "chemical_name": "Butyl 4-hydroxybenzoate and its salts Propyl 4-hydroxybenzoate and its salts",
+  "inci": [
+   "Butylparaben",
+   "propylparaben",
+   "sodium propylparaben",
+   "sodium butylparaben",
+   "potassium butylparaben",
+   "potassium propylparaben"
+  ],
+  "cas": [
+   "94-26-8",
+   "94-13-3",
+   "35285-69-9",
+   "36457-20-2",
+   "38566-94-8",
+   "84930-16-5"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,14 % (as acid) for the sum of the individual concentrations 0,8 % (as acid) for mixtures of substances mentioned in entry 12 and 12a, where the sum of the individual concentrations of butyl- and propylparaben and their salts does not exceed 0,14 %"
+  ],
+  "other": [
+   "Not to be used in leave-on products designed for application on the nappy area of children under three years of age."
+  ],
+  "warnings": [
+   "For leave-on products designed for children under three years of age: ‘Do not use on the nappy area’"
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "13",
+  "chemical_name": "3-Acetyl-6-methylpyran-2,4 (3H)-dione and its salts",
+  "inci": [
+   "Dehydroacetic acid",
+   "sodium dehydroacetate"
+  ],
+  "cas": [
+   "520-45-6",
+   "4418-26-2",
+   "16807-48-0"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,6 % (as acid)"
+  ],
+  "other": [
+   "Not to be used in aerosol dispensers (sprays)"
+  ],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "14",
+  "chemical_name": "Formic acid and its sodium salt",
+  "inci": [
+   "Formic acid",
+   "sodium formate"
+  ],
+  "cas": [
+   "64-18-6",
+   "141-53-7"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,5 % (as acid)"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "15",
+  "chemical_name": "3,3'-Dibromo-4,4'-hexamethylenedioxydi-benzamidine and its salts (including isethionate)",
+  "inci": [
+   "Dibromohexamidine Isethionate"
+  ],
+  "cas": [
+   "93856-83-8"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "16",
+  "chemical_name": "Thiomersal",
+  "inci": [
+   "Thimerosal"
+  ],
+  "cas": [
+   "54-64-8"
+  ],
+  "product_type": [
+   "Eye products"
+  ],
+  "max_concentration": [
+   "0,007 % (of Hg) If mixed with other mercurial compounds authorised by this Regulation, the maximum concentration of Hg remains fixed at 0,007 %"
+  ],
+  "other": [],
+  "warnings": [
+   "Contains Thiomersal"
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "17",
+  "chemical_name": "Phenylmercuric salts (including borate)",
+  "inci": [
+   "Phenyl Mercuric Acetate",
+   "Phenyl Mercuric Benzoate"
+  ],
+  "cas": [
+   "62-38-4",
+   "94-43-9"
+  ],
+  "product_type": [
+   "Eye products"
+  ],
+  "max_concentration": [
+   "0,007 % (of Hg) If mixed with other mercurial compounds authorised by this Regulation, the maximum concentration of Hg remains fixed at 0,007 %"
+  ],
+  "other": [],
+  "warnings": [
+   "Contains Phenylmercuric compounds"
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "18",
+  "chemical_name": "Undec-10-enoic acid and its salts",
+  "inci": [
+   "Undecylenic acid",
+   "potassium undecylenate",
+   "sodium undecylenate",
+   "calcium undecylenate",
+   "TEA-undecylenate",
+   "MEA-undecylenate"
+  ],
+  "cas": [
+   "112-38-9",
+   "6159-41-7",
+   "3398-33-2",
+   "1322-14-1",
+   "84471-25-0",
+   "56532-40-2"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,2 % (as acid)"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "19",
+  "chemical_name": "5- Pyrimidinamine, 1,3-bis (2-ethylhexyl) hexahydro-5-methyl-",
+  "inci": [
+   "Hexetidine"
+  ],
+  "cas": [
+   "141-94-6"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "20",
+  "chemical_name": "5-Bromo-5-nitro-1,3-dioxane",
+  "inci": [
+   "5-Bromo-5-nitro-1,3-dioxane"
+  ],
+  "cas": [
+   "30007-47-7"
+  ],
+  "product_type": [
+   "Rinse-off products"
+  ],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [
+   "Avoid formation of nitrosamines"
+  ],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "21",
+  "chemical_name": "Bronopol",
+  "inci": [
+   "2-Bromo-2-nitropropane-1,3-diol"
+  ],
+  "cas": [
+   "52-51-7"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [
+   "Avoid formation of nitrosamines"
+  ],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "22",
+  "chemical_name": "2,4-Dichlorobenzyl alcohol",
+  "inci": [
+   "Dichlorobenzyl Alcohol"
+  ],
+  "cas": [
+   "1777-82-8"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,15 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "23",
+  "chemical_name": "1-(4-Chlorophenyl)-3-(3,4-dichlorophenyl)urea",
+  "inci": [
+   "Triclocarban"
+  ],
+  "cas": [
+   "101-20-2"
+  ],
+  "product_type": [
+   "All cosmetic products, with the exception of mouthwash."
+  ],
+  "max_concentration": [
+   "0,2 %"
+  ],
+  "other": [
+   "Purity criteria: 3,3',4,4'-Tetrachloroazobenzene ≤ 1 ppm 3,3',4,4'-Tetrachloroazoxybenzene ≤ 1 ppm Not to be used in toothpaste intended for children under 6 years of age."
+  ],
+  "warnings": [
+   "For toothpaste containing Triclocarban the following labelling is obligatory: ‘Not to be used for children under 6 years of age’."
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "24",
+  "chemical_name": "Chlorocresol",
+  "inci": [
+   "p-Chloro-m-Cresol"
+  ],
+  "cas": [
+   "59-50-7"
+  ],
+  "product_type": [
+   "Not to be used in products applied on mucuous membranes"
+  ],
+  "max_concentration": [
+   "0,2 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "25",
+  "chemical_name": "5-Chloro-2- (2,4- dichlorophenoxy) phenol",
+  "inci": [
+   "Triclosan"
+  ],
+  "cas": [
+   "3380-34-5"
+  ],
+  "product_type": [
+   "Toothpastes; Hand soaps; Body soaps/Shower gels; Deodorants (non-spray); Face powders and blemish concealers; Nail products for cleaning the fingernails and toenails before the application of artificial nail systems"
+  ],
+  "max_concentration": [
+   "0,3 %"
+  ],
+  "other": [
+   "Not to be used in toothpaste intended for children under 3 years of age."
+  ],
+  "warnings": [
+   "For toothpaste containing Triclosan the following labelling is obligatory: ‘Not to be used for children under 3 years of age’."
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "26",
+  "chemical_name": "Chloro-xylenol",
+  "inci": [
+   "Chloroxylenol"
+  ],
+  "cas": [
+   "88-04-0"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,5 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "27",
+  "chemical_name": "N,N″-methylenebis[N′-[3-(hydroxymethyl)-2,5-dioxoimidazolidin-4-yl]urea]",
+  "inci": [
+   "Imidazolidinyl urea"
+  ],
+  "cas": [
+   "39236-46-9"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,6 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "28",
+  "chemical_name": "Polyhexamethylene biguanide hydrochloride",
+  "inci": [
+   "Polyaminopropyl biguanide"
+  ],
+  "cas": [
+   "32289-58-0",
+   "27083-27-8",
+   "28757-47-3",
+   "133029-32-0"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [
+   "Not to be used in applications that may lead to exposure of the end-user's lungs by inhalation"
+  ],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "29",
+  "chemical_name": "2-Phenoxyethanol",
+  "inci": [
+   "Phenoxyethanol"
+  ],
+  "cas": [
+   "122-99-6"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "1,0 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "30",
+  "chemical_name": "Methenamine",
+  "inci": [
+   "Methenamine"
+  ],
+  "cas": [
+   "100-97-0"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,15 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "32",
+  "chemical_name": "1-(4-Chlorophenoxy)-1-(imidazol-1-yl)-3,3-dimethylbutan-2-one",
+  "inci": [
+   "Climbazole"
+  ],
+  "cas": [
+   "38083-17-9"
+  ],
+  "product_type": [
+   "(a) Hair lotions (b) Face creams (c) Foot care products (d) Rinse-off shampoo"
+  ],
+  "max_concentration": [
+   "(a) 0,2 % (b) 0,2 % (c) 0,2 % (d) 0,5 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "33",
+  "chemical_name": "1,3-Bis (hydroxymethyl)-5,5-dimethylimidazolidine-2,4-dione",
+  "inci": [
+   "DMDM Hydantoin"
+  ],
+  "cas": [
+   "6440-58-0"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,6 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "34",
+  "chemical_name": "Benzyl alcohol",
+  "inci": [
+   "Benzyl Alcohol"
+  ],
+  "cas": [
+   "100-51-6"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "1,0 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "35",
+  "chemical_name": "1-Hydroxy-4-methyl-6-(2,4,4-trimethylpentyl) 2-pyridon and its monoethanolamine salt",
+  "inci": [
+   "1-Hydroxy-4-methyl-6-(2,4,4-trimethylpentyl) 2-pyridon",
+   "Piroctone Olamine"
+  ],
+  "cas": [
+   "50650-76-5",
+   "68890-66-4"
+  ],
+  "product_type": [
+   "Rinse-off products",
+   "Other products"
+  ],
+  "max_concentration": [
+   "1,0 %",
+   "0,5 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "37",
+  "chemical_name": "2,2'-methylenebis(6-bromo-4-chlorophenol)",
+  "inci": [
+   "Bromochlorophene"
+  ],
+  "cas": [
+   "15435-29-7"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "38",
+  "chemical_name": "4-Isopropyl-m-cresol",
+  "inci": [
+   "o-Cymen-5-ol"
+  ],
+  "cas": [
+   "3228-02-2"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "39",
+  "chemical_name": "Mixture of 5-Chloro-2-methyl-isothiazol-3(2H)-one and 2-methylisothiazol-3(2H)-one",
+  "inci": [
+   "Methylchloroisothiazolinone (and) Methylisothiazolinone"
+  ],
+  "cas": [
+   "26172-55-4",
+   "2682-20-4",
+   "55965-84-9"
+  ],
+  "product_type": [
+   "Rinse-off products"
+  ],
+  "max_concentration": [
+   "0,0015 % (of a mixture in the ratio 3:1 of 5-chloro-2-methylisothiazol 3(2H)-one and 2-methylisothiazol-3 (2H)-one)"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "42",
+  "chemical_name": "N,N″-bis(4-chlorophenyl)-3,12-diimino-2,4,11,13-tetraazatetradecanediamidine and its digluconate, diacetate and dihydrochloride",
+  "inci": [
+   "Chlorhexidine",
+   "Chlorhexidine Diacetate",
+   "Chlorhexidine Digluconate",
+   "Chlorhexidine Dihydrochloride"
+  ],
+  "cas": [
+   "55-56-1",
+   "56-95-1",
+   "18472-51-0",
+   "3697-42-5"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,3 % (as chlorhexidine)"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "43",
+  "chemical_name": "1-Phenoxypropan-2-ol",
+  "inci": [
+   "Phenoxyisopropanol"
+  ],
+  "cas": [
+   "770-35-4"
+  ],
+  "product_type": [
+   "Only for rinse-off products"
+  ],
+  "max_concentration": [
+   "1,0 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "44",
+  "chemical_name": "Alkyl (C12-22) trimethyl ammonium bromide and chloride",
+  "inci": [
+   "Behentrimonium chloride",
+   "cetrimonium bromide",
+   "cetrimonium chloride",
+   "laurtrimonium bromide",
+   "laurtrimonium chloride",
+   "steartrimonium bromide",
+   "steartrimonium chloride"
+  ],
+  "cas": [
+   "17301-53-0",
+   "57-09-0",
+   "112-02-7",
+   "1119-94-4",
+   "112-00-5",
+   "1120-02-1",
+   "112-03-8"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "45",
+  "chemical_name": "4,4-Dimethyl-1,3-oxazolidine",
+  "inci": [
+   "Dimethyl Oxazolidine"
+  ],
+  "cas": [
+   "51200-87-4"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [
+   "pH > 6"
+  ],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "46",
+  "chemical_name": "N-(Hydroxymethyl)-N-(dihydroxymethyl-1,3-dioxo-2,5-imidazolidinyl-4)-N'-(hydroxymethyl) urea",
+  "inci": [
+   "Diazolidinyl Urea"
+  ],
+  "cas": [
+   "78491-02-8"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,5 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "47",
+  "chemical_name": "Benzenecarboximidamide, 4,4'-(1,6-hexanediylbis (oxy))bis- and its salts (including isethionate and p-hydroxybenzoate)",
+  "inci": [
+   "Hexamidine",
+   "Hexamidine diisethionate",
+   "Hexamidine paraben"
+  ],
+  "cas": [
+   "3811-75-4",
+   "659-40-5",
+   "93841-83-9"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "48",
+  "chemical_name": "Glutaraldehyde (Pentane-1,5-dial)",
+  "inci": [
+   "Glutaral"
+  ],
+  "cas": [
+   "111-30-8"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [
+   "Not to be used in aerosols (sprays)"
+  ],
+  "warnings": [
+   "Contains glutaral"
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "49",
+  "chemical_name": "5-Ethyl-3,7-dioxa-1-azabicyclo [3.3.0] octane",
+  "inci": [
+   "7-Ethylbicyclooxazolidine"
+  ],
+  "cas": [
+   "7747-35-5"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,3 %"
+  ],
+  "other": [
+   "Not to be used in oral products and in products applied on mucous membranes"
+  ],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "50",
+  "chemical_name": "3-(p-Chlorophenoxy)-propane-1,2 diol",
+  "inci": [
+   "Chlorphenesin"
+  ],
+  "cas": [
+   "104-29-0"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,3 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "51",
+  "chemical_name": "Sodium N-(hydroxymethyl) glycinate",
+  "inci": [
+   "Sodium Hydroxymethylglycinate"
+  ],
+  "cas": [
+   "70161-44-3"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,5 %"
+  ],
+  "other": [
+   "Not to be used unless it can be shown that the maximum theoretical concentration of releasable formaldehyde, irrespective of the source, in the mixture as placed on the market is < 0,1 % w/w"
+  ],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "52",
+  "chemical_name": "Silver chloride deposited on titanium dioxide",
+  "inci": [
+   "Silver chloride"
+  ],
+  "cas": [
+   "7783-90-6"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,004 % (as AgCl)"
+  ],
+  "other": [
+   "20 % AgCl (w/w) on TiO2. Not to be used in products for children under 3 years of age, in oral products and in eye and lip products"
+  ],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "53",
+  "chemical_name": "Benzenemethanaminium, N,N-dimethyl-N-[2-[2-[4-(1,1,3,3,-tetramethylbutyl)phenoxy]ethoxy] ethyl]-, chloride",
+  "inci": [
+   "Benzethonium Chloride"
+  ],
+  "cas": [
+   "121-54-0"
+  ],
+  "product_type": [
+   "(a) Rinse-off products (b) Leave-on products other than oral products"
+  ],
+  "max_concentration": [
+   "0,1 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "54",
+  "chemical_name": "Benzalkonium chloride, bromide and saccharinate",
+  "inci": [
+   "Benzalkonium chloride",
+   "benzalkonium bromide",
+   "benzalkonium saccharinate"
+  ],
+  "cas": [
+   "8001-54-5",
+   "63449-41-2",
+   "91080-29-4",
+   "68989-01-5",
+   "68424-85-1",
+   "68391-01-5",
+   "61789-71-7",
+   "85409-22-9"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,1 % (as benzalkonium chloride)"
+  ],
+  "other": [],
+  "warnings": [
+   "Avoid contact with eyes"
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "55",
+  "chemical_name": "Methanol, (phenylmethoxy-)",
+  "inci": [
+   "Benzylhemiformal"
+  ],
+  "cas": [
+   "14548-60-8"
+  ],
+  "product_type": [
+   "Rinse-off products"
+  ],
+  "max_concentration": [
+   "0,15 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "56",
+  "chemical_name": "3-Iodo-2-propynylbutylcarbamate",
+  "inci": [
+   "Iodopropynyl butylcarbamate"
+  ],
+  "cas": [
+   "55406-53-6"
+  ],
+  "product_type": [
+   "(a) Rinse-off products (b) Leave-on products (c) Deo-dorants/anti-perspirants"
+  ],
+  "max_concentration": [
+   "(a) 0,02 % (b) 0,01 %, (c) 0,0075 %"
+  ],
+  "other": [
+   "Not to be used in oral and lip products (a) Not to be used in products for children under 3 years of age, except in bath products/shower gels and shampoo (b) Not to be used in body lotion and body cream (b) and (c) Not to be used in products for children under 3 years of age"
+  ],
+  "warnings": [
+   "(a) Not to be used for children under 3 years of age (b) and (c) Not to be used for children under 3 years of age"
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "57",
+  "chemical_name": "2-Methyl-2H-isothiazol-3-one",
+  "inci": [
+   "Methylisothiazolinone"
+  ],
+  "cas": [
+   "2682-20-4"
+  ],
+  "product_type": [
+   "Rinse-off products"
+  ],
+  "max_concentration": [
+   "0,0015 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "58",
+  "chemical_name": "Ethyl-N-alpha-dodecanoyl-L-arginate hydrochloride",
+  "inci": [
+   "Ethyl Lauroyl Arginate HCl"
+  ],
+  "cas": [
+   "60372-77-2"
+  ],
+  "product_type": [
+   "(a) Mouthwashes",
+   "(b) Other products"
+  ],
+  "max_concentration": [
+   "(a) 0,15 %",
+   "(b) 0,4 %"
+  ],
+  "other": [
+   "(a) Not to be used in preparations for children under 10 years of age",
+   "(b) Not to be used in lip products, oral products (other than mouthwashes), and spray products"
+  ],
+  "warnings": [
+   "(a) Not to be used for children under 10 years of age"
+  ]
+ },
+ {
+  "annex": "V",
+  "ref": "59",
+  "chemical_name": "1,2,3-Propanetricarboxylic acid, 2-hydroxy-, monohydrate and 1,2,3-Propanetricarboxylic acid, 2-hydroxy-, silver(1+) salt, monohydrate",
+  "inci": [
+   "Citric acid (and) Silver citrate"
+  ],
+  "cas": [],
+  "product_type": [],
+  "max_concentration": [
+   "0,2 %, corresponding to 0,0024 % of silver"
+  ],
+  "other": [
+   "Not to be used in oral products and eye products"
+  ],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "60",
+  "chemical_name": "4-(3-ethoxy-4-hydroxyphenyl)butan-2-one",
+  "inci": [
+   "Hydroxyethoxyphenyl Butanone"
+  ],
+  "cas": [
+   "569646-79-3"
+  ],
+  "product_type": [],
+  "max_concentration": [
+   "0,7 %"
+  ],
+  "other": [],
+  "warnings": []
+ },
+ {
+  "annex": "V",
+  "ref": "61",
+  "chemical_name": "Silver zinc zeolite",
+  "inci": [
+   "Ammonium Silver Zinc Aluminium Silicate"
+  ],
+  "cas": [
+   "130328-20-0"
+  ],
+  "product_type": [
+   "(a) Deodorant spray (b) Powder foundation"
+  ],
+  "max_concentration": [
+   "(a) and (b) 1 %"
+  ],
+  "other": [
+   "For (a) and (b) the silver content in Ammonium Silver Zinc Aluminium Silicate must not exceed 2,5 %."
+  ],
+  "warnings": []
+ }
+]
