@@ -120,10 +120,50 @@ Use `status = 'dismissed'` for changes that don't affect the rules, such as edit
 
 To add a source, insert a row into `source_watches` with its data URL and the `source_prefix` that rules use in `sources[].url`.
 
-## Saved labels on an older rulebook
+## Saved labels on an older rulebook, and brand alerts
 
-Each saved cosmetics label records the rulebook version it was checked against (`generated_labels.rulebook_version`). After publishing a new version, this lists the saved labels to re-check (for example, to contact those brands):
+Each saved cosmetics label records the rulebook version it was checked against (`generated_labels.rulebook_version`). To list the saved labels to re-check after publishing a new version:
 
 ```sql
 select * from labels_on_superseded_rulebook order by created_at desc;
 ```
+
+Publishing also queues **brand alerts** automatically (`brand_alerts`). A label gets an alert only when something that's checked changed for one of its markets: a rule or substance added, withdrawn, or with different parameters, markets, severity or thresholds. Wording-only edits don't count. A label saved without markets is treated as GB. The alert lists those changes, and the brand's email comes from the lead form (`early_access_signups`). Labels with no email on file show as "No email on file".
+
+Nothing is emailed automatically. Admins review alerts in **/admin/leads → Brand alerts** and either:
+
+- **Send** (one, or "Send all"), which emails through Resend via the `send-brand-alerts` edge function;
+- **Write it myself**, which opens the same email in your mail app, then **Mark as sent**; or
+- **Dismiss**.
+
+If a label gets a newer alert before the older one is sent, the older one is dismissed automatically, because the newer one lists everything since the label was checked.
+
+Sending by email needs these Edge Function secrets (Supabase → Edge Functions → Secrets):
+
+| Secret | |
+| --- | --- |
+| `RESEND_API_KEY` | Required. Without it, "Send" says email isn't set up; "Write it myself" still works. |
+| `BRAND_ALERTS_FROM` | Sender on a domain verified in Resend. Default `Labelring <alerts@labelring.co.uk>`. |
+| `BRAND_ALERTS_REPLY_TO` | Optional reply-to address. |
+| `SITE_URL` | Links in the email. Default `https://www.labelring.co.uk`. |
+
+To see what changed between two versions, or to queue alerts again (it's safe to re-run; each label gets one alert per version):
+
+```sql
+select * from rulebook_version_changes(
+  (select id from rulebook_versions where scope = 'cosmetics' and version = '2026.1'),
+  (select id from rulebook_versions where scope = 'cosmetics' and version = '2026.2'));
+
+select queue_brand_alerts((select id from rulebook_versions where scope = 'cosmetics' and version = '2026.2'));
+```
+
+## Admin access
+
+Only accounts listed in `admin_users` can read scans, saved labels, leads data and the rulebook in the app, or edit Insights. Being signed in isn't enough. To add someone, first create their login in Supabase → Authentication → Users, then:
+
+```sql
+insert into admin_users (user_id, email, added_by)
+select id, email, 'Your name' from auth.users where email = 'person@example.com';
+```
+
+To remove them: `delete from admin_users where email = 'person@example.com';`
