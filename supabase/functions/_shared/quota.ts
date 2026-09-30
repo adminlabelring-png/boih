@@ -26,11 +26,12 @@ async function hmac(secret: string, value: string): Promise<string> {
   return hex(await crypto.subtle.sign("HMAC", key, encoder.encode(value))).slice(0, 32);
 }
 
+// Supabase sits behind Cloudflare, which sets cf-connecting-ip and
+// overwrites any value the client sends. x-forwarded-for is not used: its
+// first entry is whatever the client chose, so it would let anyone reset
+// their limit with a made-up header.
 const clientIp = (req: Request): string | null =>
-  req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-  req.headers.get("cf-connecting-ip") ||
-  req.headers.get("x-real-ip") ||
-  null;
+  req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") || null;
 
 export function serviceClient(): SupabaseClient {
   const url = Deno.env.get("SUPABASE_URL");

@@ -8,6 +8,7 @@ import { useScan } from "@/lib/scan-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSeo } from "@/hooks/use-seo";
 import LeadCaptureDialog, { hasSubmittedLead } from "@/components/LeadCaptureDialog";
+import ScanIntake from "@/components/ScanIntake";
 
 const ACCEPTED = ".jpg,.jpeg,.png,.pdf";
 const SEASON_TAGS = ["Christmas", "Diwali", "Easter", "Summer", "Promo Pack", "Limited Edition"];
@@ -211,7 +212,10 @@ const ScanUploadPage = () => {
                 </button>
               )}
             </div>
-            <div className="w-full max-w-xs mx-auto">{seasonalPanel}</div>
+            <div className="w-full max-w-xs mx-auto space-y-3">
+              <ScanIntake options={options} setOptions={setOptions} />
+              {seasonalPanel}
+            </div>
             <Button onClick={startScan} size="lg" className="w-full max-w-xs mx-auto gap-2 h-14 text-base">
               <FileImage className="h-5 w-5" />
               Scan Label{staged.length > 1 ? ` (${staged.length} images)` : ""}
@@ -320,6 +324,7 @@ const ScanUploadPage = () => {
 
       <input ref={inputRef} type="file" accept={ACCEPTED} multiple onChange={onSelect} className="hidden" />
 
+      <ScanIntake options={options} setOptions={setOptions} />
       {seasonalPanel}
 
       {/* Action buttons */}

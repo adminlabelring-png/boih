@@ -5,6 +5,7 @@ import { CheckCircle, AlertTriangle, HelpCircle, XCircle, ChevronDown, ImagePlus
 import { Button } from "@/components/ui/button";
 import { useScan, DetectedField, getOverallAssessment, getAssessmentSummary } from "@/lib/scan-context";
 import { generateComplianceReport } from "@/lib/generate-report";
+import { scanToLabel } from "@/lib/scan-to-label";
 import RuleFindings from "@/components/RuleFindings";
 import { CHECK_DISCLAIMER } from "@/lib/disclaimer";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ const ScanResultsPage = () => {
   const verifiedFields = result.fields.filter(f => f.status === "verified");
   const issueFields = result.fields.filter(f => f.status !== "verified");
   const assessment = getOverallAssessment(result);
+  const openIssueCount = result.findings.filter((f) => f.status === "fail" || f.status === "review").length;
   const summaryText = getAssessmentSummary(result);
 
   const handleNewScan = () => {
@@ -427,6 +429,15 @@ const ScanResultsPage = () => {
         className="rounded-lg border bg-card p-4 space-y-3"
       >
         <h2 className="text-base font-semibold">Actions</h2>
+        <Button
+          className="w-full gap-2"
+          onClick={() => navigate("/generate", { state: { fromScan: scanToLabel(result) } })}
+        >
+          <Sparkles className="h-4 w-4" />
+          {openIssueCount > 0
+            ? `Fix ${openIssueCount === 1 ? "this issue" : `these ${openIssueCount} issues`} in the label builder`
+            : "Open this label in the label builder"}
+        </Button>
         <div className="flex flex-col sm:flex-row gap-3">
           <Button variant="outline" className="flex-1 gap-2" onClick={() => generateComplianceReport(result)}>
               <Download className="h-4 w-4" /> Download report
