@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import type { ScanChanges } from "./scan-diff";
 import { findAllergensInText, findFragranceAllergensInIngredients } from "./allergens";
-import type { RuleFinding, RulebookStamp } from "../../supabase/functions/_shared/rule-engine";
+import type { Market, Role, RuleFinding, RulebookStamp } from "../../supabase/functions/_shared/rule-engine";
 
-export type { RuleFinding, RulebookStamp };
+export type { Market, Role, RuleFinding, RulebookStamp };
 
 // Four-state field status, replacing a binary found/missing model:
 //   verified       — clearly visible, extracted with high confidence
@@ -65,6 +65,11 @@ export interface ScanResult {
 export interface ScanOptions {
   isSeasonal: boolean;
   seasonTag: string | null;
+  // Intake answers: where the product will be sold, and the brand's role
+  // (decides e.g. whether country of origin is required). Sent to the
+  // rule engine so only the relevant markets' rules are checked.
+  markets: Market[];
+  role: Role | null;
 }
 
 interface ScanContextType {
@@ -77,7 +82,7 @@ interface ScanContextType {
   reset: () => void;
 }
 
-const defaultOptions: ScanOptions = { isSeasonal: false, seasonTag: null };
+const defaultOptions: ScanOptions = { isSeasonal: false, seasonTag: null, markets: ["GB"], role: null };
 
 const ScanContext = createContext<ScanContextType | null>(null);
 

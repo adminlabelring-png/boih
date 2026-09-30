@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Sparkles, Loader2, Download, QrCode, Share2, Copy } from "lucide-react";
 import QRCode from "qrcode";
 import jsPDF from "jspdf";
@@ -46,6 +47,8 @@ import { getLeadId } from "@/lib/lead-tracker";
 import { cn } from "@/lib/utils";
 import LivePreview from "@/components/generator/LivePreview";
 import ComplianceCheck from "@/components/generator/ComplianceCheck";
+import ScanTodo from "@/components/generator/ScanTodo";
+import type { ScanHandoff } from "@/lib/scan-to-label";
 
 import { CATEGORIES } from "@/lib/categories";
 import LeadCaptureDialog, { hasSubmittedLead, getSignupId } from "@/components/LeadCaptureDialog";
@@ -70,7 +73,13 @@ const GenerateLabelPage = () => {
     path: "/generate",
   });
 
-  const [fields, setFields] = useState<LabelFields>(emptyLabel);
+  // "Fix these" from a scan arrives as router state: the scanned values as
+  // a starting draft, and the rule findings as a to-do list.
+  const location = useLocation();
+  const [scanHandoff, setScanHandoff] = useState<ScanHandoff | null>(
+    () => (location.state as { fromScan?: ScanHandoff } | null)?.fromScan ?? null
+  );
+  const [fields, setFields] = useState<LabelFields>(() => scanHandoff?.fields ?? emptyLabel);
   const [preview, setPreview] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [busyField, setBusyField] = useState<string | null>(null);
@@ -376,17 +385,19 @@ const GenerateLabelPage = () => {
           <h1 className="text-xl font-semibold tracking-tight">Label Generator</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {pack === "food"
-              ? "UK FIC pre-packed food label — retail ready draft."
+              ? "UK FIC pre-packed food label draft."
               : pack === "cosmetic"
               ? "UK/EU cosmetic label with INCI ingredients."
               : "Choose a category to unlock the correct rule pack."}
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Compliance score</span>
+          <span className="text-muted-foreground">Checks passed</span>
           <span className={`text-2xl font-bold ${scoreColor}`}>{score}%</span>
         </div>
       </div>
+
+      {scanHandoff && <ScanTodo handoff={scanHandoff} onDismiss={() => setScanHandoff(null)} />}
 
       <div className="grid gap-6 xl:grid-cols-[1fr,400px]">
         {/* LEFT: form */}

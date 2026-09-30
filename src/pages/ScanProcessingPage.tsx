@@ -88,6 +88,8 @@ const ScanProcessingPage = () => {
               isSeasonal: options.isSeasonal,
               seasonTag: options.seasonTag,
               signupId: getSignupId(),
+              markets: options.markets,
+              role: options.role,
             },
             signal: abort.signal,
           })
@@ -172,6 +174,7 @@ const ScanProcessingPage = () => {
             mime_type: primary.mime_type,
             images: images as any,
             category: result.category,
+            market: options.markets.join(","),
             found_count: result.foundCount,
             total_count: result.totalCount,
             needs_attention_count: result.needsAttentionCount,
