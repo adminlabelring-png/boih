@@ -5,6 +5,7 @@ import { CheckCircle, AlertTriangle, HelpCircle, XCircle, ChevronDown, ImagePlus
 import { Button } from "@/components/ui/button";
 import { useScan, DetectedField, getOverallAssessment, getAssessmentSummary } from "@/lib/scan-context";
 import { generateComplianceReport } from "@/lib/generate-report";
+import RuleFindings from "@/components/RuleFindings";
 import { cn } from "@/lib/utils";
 import { useSeo } from "@/hooks/use-seo";
 
@@ -344,6 +345,13 @@ const ScanResultsPage = () => {
         </p>
         <p className="text-sm text-muted-foreground mt-2">{assessment.detail}</p>
       </motion.div>
+
+      {/* Deterministic checks against the versioned rulebook */}
+      {result.rulebook && result.findings.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+          <RuleFindings findings={result.findings} rulebook={result.rulebook} />
+        </motion.div>
+      )}
 
       {/* Detected Information */}
       <motion.div
