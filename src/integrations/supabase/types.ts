@@ -165,6 +165,7 @@ export type Database = {
           source_scan_id: string | null
           changes_from_scan: Json | null
           approved_at: string | null
+          rulebook_version: string | null
           markets: string[] | null
           signup_id: string | null
           storage_instructions: string | null
@@ -204,6 +205,7 @@ export type Database = {
           source_scan_id?: string | null
           changes_from_scan?: Json | null
           approved_at?: string | null
+          rulebook_version?: string | null
           markets?: string[] | null
           signup_id?: string | null
           storage_instructions?: string | null
@@ -243,6 +245,7 @@ export type Database = {
           source_scan_id?: string | null
           changes_from_scan?: Json | null
           approved_at?: string | null
+          rulebook_version?: string | null
           markets?: string[] | null
           signup_id?: string | null
           storage_instructions?: string | null
