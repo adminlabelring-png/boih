@@ -10,7 +10,7 @@ The EU source is the consolidated text from the EU Publications Office;
 the GB source is legislation.gov.uk's data.xml for each annex of the
 retained regulation. scripts/rulebook/fetch_sources.sh downloads both.
 
-Needs beautifulsoup4 (pip install beautifulsoup4).
+Needs beautifulsoup4 and lxml (pip install beautifulsoup4 lxml).
 """
 import json
 import re
