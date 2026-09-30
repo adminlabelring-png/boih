@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { LabelFields, Pack } from "./label-rules";
+import { getSignupId } from "@/components/LeadCaptureDialog";
 
 class GenerateLabelError extends Error {
   status?: number;
@@ -33,7 +34,7 @@ export async function suggestField(
   pack: Pack
 ): Promise<string> {
   const { data, error } = await supabase.functions.invoke("generate-label", {
-    body: { mode: "field", field, fields, pack },
+    body: { mode: "field", field, fields, pack, signupId: getSignupId() },
   });
   if (error) throw await toGenerateLabelError(error);
   const value = (data as { value?: string })?.value;
@@ -46,7 +47,7 @@ export async function generatePreview(
   pack: Pack
 ): Promise<string> {
   const { data, error } = await supabase.functions.invoke("generate-label", {
-    body: { mode: "preview", fields, pack },
+    body: { mode: "preview", fields, pack, signupId: getSignupId() },
   });
   if (error) throw await toGenerateLabelError(error);
   return (data as { preview?: string })?.preview ?? "";

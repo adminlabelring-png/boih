@@ -308,7 +308,7 @@ const InsightsPage = () => {
         <div className="space-y-1">
           <h2 className="text-sm font-semibold">Ready to check your own label?</h2>
           <p className="text-sm text-muted-foreground">
-            Scan an existing label or generate a compliant one — both take a couple of minutes.
+            Scan an existing label or build a new one checked against current UK regulations — both take a couple of minutes.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 shrink-0">

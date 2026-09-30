@@ -67,6 +67,16 @@ The frontend is a static Vite/React app hosted on **GitHub Pages**; the backend 
 | `SUPABASE_DB_PASSWORD` | Database password, needed for `supabase db push` |
 | `OPENROUTER_API_KEY` | OpenRouter API key used by the `analyze-label`/`generate-label` edge functions |
 
+### Edge function settings (optional)
+
+Set these as Supabase edge function secrets (`supabase secrets set NAME=value`):
+
+| Secret | Default | Purpose |
+| --- | --- | --- |
+| `SCAN_DAILY_LIMIT` | `3` | Free label scans per person per day, counted by IP and by lead email. `0` turns the limit off. |
+| `GENERATE_DAILY_LIMIT` | `200` | AI wording suggestions/previews per person per day in the label generator. |
+| `QUOTA_EXEMPT_EMAILS` | _(none)_ | Comma-separated emails that are never limited while signed in (e.g. the team, for testing). |
+
 ### GitHub Pages settings
 
 In the repo's **Settings → Pages**, set the source to "GitHub Actions". The site is served from the custom domain `www.labelring.co.uk` at the root, so the Vite `base` in `vite.config.ts` is `/`. If you ever move back to the default project-page URL (`https://<user>.github.io/labelring/`) instead of a custom domain, `base` needs to become `/labelring/` again.

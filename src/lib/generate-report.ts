@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import { ScanResult, DetectedField, getOverallAssessment, getAssessmentSummary } from "./scan-context";
 import { findingStatusLabel, rulebookStampText } from "./rule-findings";
+import { CHECK_DISCLAIMER } from "./disclaimer";
 
 const statusLabel = (status: DetectedField["status"]) => {
   switch (status) {
@@ -176,8 +177,8 @@ export const generateComplianceReport = (result: ScanResult) => {
   y += 10;
   if (y > 250) { doc.addPage(); y = 20; }
   const disclaimer = result.coverage.isComplete
-    ? "This is an automated label review. Final compliance should be verified against official guidelines."
-    : "This assessment is based only on the visible areas of the submitted packaging. Information identified as \"Not Verified\" may exist elsewhere on the product and should not be interpreted as missing without additional images.";
+    ? CHECK_DISCLAIMER
+    : `This assessment is based only on the visible areas of the submitted packaging. Information identified as "Not Verified" may exist elsewhere on the product and should not be interpreted as missing without additional images. ${CHECK_DISCLAIMER}`;
   const stamp = result.rulebook ? ` ${rulebookStampText(result.rulebook, result.findings)}` : "";
   const disclaimerLines = doc.splitTextToSize(disclaimer + stamp, pageWidth - 36);
   doc.setFillColor(245, 245, 245);

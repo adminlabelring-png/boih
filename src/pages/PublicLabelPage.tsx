@@ -152,7 +152,7 @@ const PublicLabelPage = () => {
 
           <div className="flex items-center gap-2 rounded-b-xl border-t bg-muted/20 px-5 py-3 text-[11px] text-muted-foreground">
             <ShieldCheck className="h-3.5 w-3.5" />
-            AI-assisted draft · Verify against official regulations before print.
+            Draft checked against current UK regulations · not a guarantee of compliance
           </div>
         </div>
 

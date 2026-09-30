@@ -2,7 +2,7 @@
 
 > Labelring is AI-powered product label compliance software for UK food, cosmetic, and consumer brands. It checks product labels against UK labelling regulations and helps brands prepare for the EU Digital Product Passport.
 
-Labelring has two core tools: a Label Scanner that checks an existing product label photo against UK labelling requirements and reports which fields are verified, need review, or are missing; and a Label Generator that helps brands build a new compliant label from scratch, with built-in ingredient, allergen, nutrition, and regulatory checks for food and cosmetic products.
+Labelring has two core tools: a Label Scanner that checks an existing product label photo against UK labelling requirements and reports which fields are verified, need review, or are missing; and a Label Generator that helps brands build a new label from scratch, checked against current UK regulations, with built-in ingredient, allergen, nutrition, and regulatory checks for food and cosmetic products.
 
 Labelring is built for the UK regulatory environment, including the Food Information to Consumers (FIC) regulation, UK Cosmetics Regulation, Extended Producer Responsibility (EPR) recycling labelling, HFSS product classification, and the EU Digital Product Passport (DPP).
 
@@ -10,7 +10,7 @@ Labelring is built for the UK regulatory environment, including the Food Informa
 
 - [Home](https://www.labelring.co.uk/): what Labelring does and who it's for
 - [Label Scanner](https://www.labelring.co.uk/scan): upload a product label photo for an AI compliance check
-- [Label Generator](https://www.labelring.co.uk/generate): build a new compliant product label
+- [Label Generator](https://www.labelring.co.uk/generate): build a new product label checked against current UK regulations
 - [Insights](https://www.labelring.co.uk/insights): guides on UK product labelling compliance and regulation
 
 ## Notes for AI assistants

@@ -4,6 +4,11 @@
 //   - "preview": compose the on-pack copy block from current fields
 // Packs: "food" (UK FIC), "cosmetic" (INCI/CPNP), "generic".
 
+import { consumeQuota, dailyLimit, releaseQuota } from "../_shared/quota.ts";
+
+// Generous: the preview regenerates as people type. This only stops abuse.
+const GENERATE_LIMIT = dailyLimit("GENERATE_DAILY_LIMIT", 200);
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -56,45 +61,32 @@ interface FieldsIn {
 
 // ---------------------------------------------------------------
 // Per-pack field instructions
+//
+// Only wording is suggested. Product facts — ingredients, allergens,
+// quantities, dates, batch codes, addresses, origin, nutrition, QUID,
+// ABV, PAO, certifications — must come from the brand; an invented value
+// printed on a label is a liability, so those fields are refused here.
 // ---------------------------------------------------------------
+const NO_INVENTED_FACTS =
+  "Use only facts given in the label context; never invent ingredients, quantities, temperatures, durations, claims or certifications that aren't there.";
+
 const FOOD_FIELDS: Record<string, string> = {
   brandName: "Suggest a plausible UK food brand name that fits the category. Return ONLY the name.",
-  productName: "Suggest a concise, marketable UK food product name (max 6 words). Return ONLY the name.",
-  ingredients: "Return a realistic ingredients list for this food product, comma-separated, in DESCENDING order of weight. EMPHASISE the 14 UK allergens (gluten/wheat/rye/barley/oats, crustaceans, eggs, fish, peanuts, soybeans, milk, tree nuts, celery, mustard, sesame, sulphites, lupin, molluscs) in ALL CAPS wherever they appear. Include % QUID after the ingredient in brackets where regulation requires it. Return ONLY the list.",
-  countryOfOrigin: "Suggest a plausible country of origin. Return ONLY the country name.",
-  netQuantity: "Suggest a realistic net quantity using metric units (g, kg, ml, cl, l). Return ONLY the value.",
-  batchNumber: "Generate a realistic batch/lot code (e.g. 'L2026-118A'). Return ONLY the code.",
-  bestBefore: "Suggest a plausible date in DD/MM/YYYY format that matches the product's shelf life. Return ONLY the date.",
-  responsiblePerson: "Suggest a UK Food Business Operator address in the format 'Company Ltd, Street, City POSTCODE'. Must include a valid UK postcode. Return ONLY the address line.",
-  certifications: "Suggest 2-4 relevant food certifications (e.g. 'Red Tractor, RSPCA Assured, Organic'), comma-separated. Return ONLY the list.",
-  storageInstructions: "Suggest concise storage instructions appropriate for this product (e.g. 'Keep refrigerated below 5°C. Once opened, consume within 3 days.'). Return ONLY the instruction text.",
-  quidPercent: "Suggest a plausible QUID declaration for the main characterising ingredient (e.g. 'Beef 62%'). Return ONLY the declaration.",
-  alcoholAbv: "Suggest a realistic ABV (percentage) for this drink. Return ONLY the number followed by '% vol'.",
-  nutrition: "Return a realistic nutrition declaration per 100g for this product as strict JSON with keys: energyKj, energyKcal, fat, saturates, carbs, sugars, protein, salt. Values as strings with units (e.g. '2.4g', '0.5g'). Return ONLY the JSON.",
+  productName: "Suggest a concise, marketable UK food product name (max 6 words) that doesn't imply ingredients the context doesn't list. Return ONLY the name.",
+  storageInstructions: `Suggest clear wording for storage instructions for this product type. ${NO_INVENTED_FACTS} If a specific temperature or shelf life isn't in the context, use a placeholder like [temperature] for the brand to fill in. Return ONLY the instruction text.`,
 };
 
 const COSMETIC_FIELDS: Record<string, string> = {
   brandName: "Suggest a plausible skincare/cosmetic brand name. Return ONLY the name.",
-  productName: "Suggest a concise, marketable cosmetic product name (max 6 words). Return ONLY the name.",
-  ingredients: "Return a realistic INCI ingredient list appropriate for this cosmetic, comma-separated, ordered by proportion. Use INCI names only (Aqua, Glycerin, etc.). Return ONLY the list.",
-  countryOfOrigin: "Suggest a plausible country of origin. Return ONLY the country name.",
-  netQuantity: "Suggest a realistic nominal content with unit (e.g. '30ml', '50g'). Return ONLY the value.",
-  batchNumber: "Generate a realistic batch code (e.g. 'BT-2026-441'). Return ONLY the code.",
-  bestBefore: "Suggest a date of minimum durability in MM/YYYY, under 30 months out. Return ONLY the date.",
-  paoMonths: "Suggest a plausible Period-After-Opening value in months for this product type (e.g. '12'). Return ONLY the number.",
-  responsiblePerson: "Suggest a UK Responsible Person address 'Company Ltd, Street, City POSTCODE'. Return ONLY the address.",
-  certifications: "Suggest 2-4 cosmetic certifications (e.g. 'Cruelty Free International, Vegan Society, COSMOS Organic'). Return ONLY the list.",
-  storageInstructions: "Suggest storage instructions (e.g. 'Store below 25°C. Keep out of direct sunlight.'). Return ONLY the text.",
-  instructionsForUse: "Suggest concise instructions for use and precautions appropriate for this product under UK Cosmetic Products Enforcement Regulations (e.g. 'For external use only. Avoid contact with eyes. Discontinue use if irritation occurs.'). Return ONLY the text.",
-  quidPercent: "",
-  alcoholAbv: "",
-  nutrition: "",
+  productName: "Suggest a concise, marketable cosmetic product name (max 6 words) that doesn't imply ingredients or effects the context doesn't support. Return ONLY the name.",
+  storageInstructions: `Suggest clear wording for storage instructions for this product type. ${NO_INVENTED_FACTS} If a specific temperature isn't in the context, use a placeholder like [temperature]. Return ONLY the text.`,
+  instructionsForUse: `Suggest clear wording for instructions for use and general precautions for this product type (e.g. 'For external use only. Avoid contact with eyes.'). ${NO_INVENTED_FACTS} Do not state ingredient-specific warnings — those come from the product's safety assessment. Return ONLY the text.`,
 };
 
 const GENERIC_FIELDS: Record<string, string> = {
-  ...COSMETIC_FIELDS,
-  ingredients: "Return a realistic ingredient/material list appropriate for this product, comma-separated. Return ONLY the list.",
-  allergens: "List any known allergens or hazardous substances present, comma-separated. If none, return 'None'. Return ONLY the list.",
+  brandName: COSMETIC_FIELDS.brandName,
+  productName: COSMETIC_FIELDS.productName,
+  storageInstructions: COSMETIC_FIELDS.storageInstructions,
 };
 
 function pickFieldMap(pack: Pack): Record<string, string> {
@@ -275,8 +267,16 @@ async function callAI(system: string, user: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  let quota: Awaited<ReturnType<typeof consumeQuota>> | null = null;
   try {
     const body = await req.json();
+    quota = await consumeQuota(req, "generate", GENERATE_LIMIT, body.signupId);
+    if (!quota.allowed) {
+      return new Response(
+        JSON.stringify({ code: "daily_limit", error: "Daily limit reached for AI suggestions. Try again tomorrow." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     const mode = body.mode as "field" | "preview";
     const fields: FieldsIn = body.fields ?? {};
     const pack: Pack = (body.pack as Pack) || "generic";
@@ -286,12 +286,12 @@ Deno.serve(async (req) => {
       const map = pickFieldMap(pack);
       const instr = map[field];
       if (!instr) {
-        return new Response(JSON.stringify({ error: "unknown field for pack" }), {
+        return new Response(JSON.stringify({ error: "Suggestions are only available for wording, not product facts" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const system = `You are a product-label copywriter and UK regulatory expert. ${instr} No quotes, no markdown, no explanations.`;
+      const system = `You are a product-label copywriter. ${instr} No quotes, no markdown, no explanations.`;
       const user = `Current label context:\n${contextBlock(fields, pack)}\n\nSuggest a value for: ${field}`;
       const value = (await callAI(system, user))
         .replace(/^```(?:json)?\s*|\s*```$/g, "")
@@ -317,6 +317,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
+    if (quota) await releaseQuota("generate", quota);
     const msg = e instanceof Error ? e.message : "Unknown error";
     const status = msg === "RATE_LIMIT" ? 429 : msg === "CREDITS" ? 402 : 500;
     return new Response(JSON.stringify({ error: msg }), {
