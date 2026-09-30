@@ -14,6 +14,8 @@ export type Severity = "legal" | "best_practice";
 export type FindingStatus = "fail" | "review" | "not_verified" | "pass";
 export type VerificationStatus = "unverified" | "verified" | "rejected";
 export type Role = "manufacturer" | "importer" | "distributor";
+// What the product is packed in, from the intake question.
+export type PackFormat = "carton" | "container_only" | "small" | "sample" | "leaflet";
 
 export type CheckType =
   | "present"
@@ -105,7 +107,7 @@ export interface RuleFinding {
   field: string | null;
   markets: Market[];
   sources: RuleSource[];
-  // Whether a qualified reviewer has signed this rule off.
+  // Whether a Labelring admin has signed this rule off.
   verified: boolean;
 }
 
@@ -114,6 +116,8 @@ export interface RulebookStamp {
   version: string;
   status: "draft" | "published";
   markets: Market[];
+  // The pack answer the check assumed, if one was given.
+  pack?: PackFormat | null;
   checkedAt: string;
 }
 
@@ -124,6 +128,7 @@ export interface EvaluationInput {
   role?: Role | null;
   // For date-dependent entries (e.g. new allergens from 1 August 2026).
   today?: string;
+  pack?: PackFormat | null;
 }
 
 export const ALL_MARKETS: Market[] = ["GB", "NI", "EU"];
@@ -134,6 +139,11 @@ export const isMarket = (m: unknown): m is Market =>
 
 export const isRole = (r: unknown): r is Role =>
   r === "manufacturer" || r === "importer" || r === "distributor";
+
+export const PACK_FORMATS: PackFormat[] = ["carton", "container_only", "small", "sample", "leaflet"];
+
+export const isPackFormat = (p: unknown): p is PackFormat =>
+  typeof p === "string" && (PACK_FORMATS as string[]).includes(p);
 
 // Which rulebook (if any) covers a scan's detected category. Only cosmetics
 // has a rulebook so far; everything else gets no rule findings.
@@ -443,7 +453,8 @@ const evaluateRule = (
   fieldsByLabel: Map<string, ExtractedField>,
   markets: Market[],
   role: Role | null,
-  substances: Substance[]
+  substances: Substance[],
+  pack: PackFormat | null
 ): RuleFinding | null => {
   const applicableMarkets = rule.markets.filter((m) => markets.includes(m));
   const sources = rule.sources.filter((s) => applicableMarkets.includes(s.market));
@@ -481,6 +492,21 @@ const evaluateRule = (
   }
 
   if (field.status === "missing") {
+    // Pack-size exemptions (Art. 19): e.g. no nominal content needed under
+    // 5 g / 5 ml, or ingredients on an enclosed leaflet when they can't fit.
+    const notRequired = rule.params.not_required_for_pack as PackFormat[] | undefined;
+    if (pack && notRequired?.includes(pack)) {
+      return finding("pass", (rule.params.not_required_note as string) ?? "Not required for this pack.", null);
+    }
+    const leafletOk = rule.params.leaflet_allowed_for_pack as PackFormat[] | undefined;
+    if (pack && leafletOk?.includes(pack)) {
+      return finding(
+        "review",
+        (rule.params.leaflet_note as string) ??
+          "Not on the pack. For a pack this small it may go on an enclosed leaflet, tag or card, with the hand-in-book symbol on the pack.",
+        rule.fix_hint
+      );
+    }
     if (rule.check_type === "present_if_applicable") {
       return finding("review", `Not found on the pack. ${rule.explanation}`, rule.fix_hint);
     }
@@ -523,7 +549,7 @@ export const evaluateRules = (input: EvaluationInput, rulebook: Rulebook): RuleF
   const findings = rulebook.rules
     .filter((r) => r.verification_status !== "rejected")
     .filter((r) => r.markets.some((m) => markets.includes(m)))
-    .map((r) => evaluateRule(r, fieldsByLabel, markets, role, substances))
+    .map((r) => evaluateRule(r, fieldsByLabel, markets, role, substances, input.pack ?? null))
     .filter((f): f is RuleFinding => f !== null);
 
   return rankFindings(findings);

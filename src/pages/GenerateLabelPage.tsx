@@ -43,7 +43,8 @@ import {
 import { checkDraft, generatePreview, suggestField, type DraftCheck } from "@/lib/generate-label";
 import RuleFindings from "@/components/RuleFindings";
 import { rulebookStampText, findingStatusLabel } from "@/lib/rule-findings";
-import type { Market } from "@/lib/scan-context";
+import type { Market, PackFormat } from "@/lib/scan-context";
+import { PACK_OPTIONS } from "@/components/ScanIntake";
 import { DRAFT_LABEL_DISCLAIMER } from "@/lib/disclaimer";
 import { supabase } from "@/integrations/supabase/client";
 import { getLeadId } from "@/lib/lead-tracker";
@@ -94,6 +95,8 @@ const GenerateLabelPage = () => {
   const [fields, setFields] = useState<LabelFields>(() => scanHandoff?.fields ?? emptyLabel);
   // Markets the master label must satisfy; each market's rules check it.
   const [markets, setMarkets] = useState<Market[]>(() => scanHandoff?.rulebook?.markets ?? ["GB"]);
+  // How it's packed (small-pack exemptions); optional.
+  const [packFormat, setPackFormat] = useState<PackFormat | null>(() => scanHandoff?.rulebook?.pack ?? null);
   const [draftCheck, setDraftCheck] = useState<DraftCheck | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -168,7 +171,7 @@ const GenerateLabelPage = () => {
     }
     let cancelled = false;
     const t = setTimeout(() => {
-      checkDraft(fields, markets)
+      checkDraft(fields, markets, packFormat)
         .then((r) => !cancelled && setDraftCheck(r))
         .catch((e) => console.warn("rulebook check failed", e));
     }, 800);
@@ -177,7 +180,7 @@ const GenerateLabelPage = () => {
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(fields), pack, markets.join(",")]);
+  }, [JSON.stringify(fields), pack, markets.join(","), packFormat]);
 
   // Debounced preview generation — skips while a Suggest is in flight to avoid rate limits
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -274,6 +277,7 @@ const GenerateLabelPage = () => {
           responsible_person: fields.responsiblePerson || null,
           eu_responsible_person: fields.euResponsiblePerson || null,
           markets: pack === "cosmetic" ? markets : null,
+          pack_format: pack === "cosmetic" ? packFormat : null,
           rulebook_version: rulebookFindings && draftCheck?.rulebook
             ? `${draftCheck.rulebook.scope} ${draftCheck.rulebook.version}`
             : null,
@@ -940,6 +944,34 @@ const GenerateLabelPage = () => {
                   </div>
                   <p className="text-[11px] text-muted-foreground">
                     One master label is checked against every market you pick.
+                  </p>
+                </div>
+              )}
+              {pack === "cosmetic" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">How is it packed? (optional)</Label>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Pack">
+                    {PACK_OPTIONS.map((p) => {
+                      const active = packFormat === p.value;
+                      return (
+                        <button
+                          key={p.value}
+                          type="button"
+                          aria-pressed={active}
+                          title={p.hint}
+                          onClick={() => setPackFormat(active ? null : p.value)}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                            active ? "border-primary bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-accent"
+                          )}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Small packs, samples and leaflets have their own rules for what must be on the pack itself.
                   </p>
                 </div>
               )}

@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { LabelFields, Pack } from "./label-rules";
 import { getSignupId } from "@/components/LeadCaptureDialog";
-import type { Market, RuleFinding, RulebookStamp } from "./scan-context";
+import type { Market, PackFormat, RuleFinding, RulebookStamp } from "./scan-context";
 
 class GenerateLabelError extends Error {
   status?: number;
@@ -49,11 +49,16 @@ export interface DraftCheck {
 }
 
 // Runs the label draft through the same versioned rulebook as scans.
-export async function checkDraft(fields: LabelFields, markets: Market[]): Promise<DraftCheck> {
+export async function checkDraft(
+  fields: LabelFields,
+  markets: Market[],
+  packFormat: PackFormat | null = null
+): Promise<DraftCheck> {
   const { data, error } = await supabase.functions.invoke("check-label", {
     body: {
       category: fields.category,
       markets,
+      pack: packFormat,
       draft: {
         productName: fields.productName,
         ingredients: fields.ingredients,

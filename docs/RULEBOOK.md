@@ -2,7 +2,7 @@
 
 How to review, sign off, publish and change the cosmetics rulebook. Run these in the Supabase SQL editor; writes are service-role only, so they can't be made from the app.
 
-The scanner (`analyze-label`) and the label builder (`check-label`) both check labels against the **published** version. If there isn't one, they use the **latest draft** and mark every result "Provisional: these rules have not yet been signed off by a qualified reviewer."
+The scanner (`analyze-label`) and the label builder (`check-label`) both check labels against the **published** version. If there isn't one, they use the **latest draft** and mark every result "Provisional: this rulebook version hasn't yet been reviewed and published by the Labelring team." Admins review and publish from **/admin/leads → Rulebook** (see below).
 
 ## Tables
 
@@ -14,6 +14,16 @@ The scanner (`analyze-label`) and the label builder (`check-label`) both check l
 | `rulebook_audit_log` | Append-only record of every entry created and every sign-off change. |
 
 ## Review and sign off
+
+Admins do this in the app: **/admin/leads → Rulebook**. It lets you:
+
+- **Sign off rules** one at a time, each linking to the clause it cites.
+- **Sign off an official list** (e.g. GB Annex III), after comparing a random sample of its entries with the source. A note is required, and your account is recorded as the reviewer.
+- **Look up an entry** by INCI name, chemical name or CAS number, and sign it off, reject it or reopen it.
+- **Work the source-change alerts** from the weekly monitor.
+- **Publish** the version once nothing is left to review.
+
+The SQL below does the same from the Supabase SQL editor.
 
 1. List what's waiting:
 

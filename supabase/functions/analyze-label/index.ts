@@ -4,6 +4,7 @@ import {
   evaluateRules,
   isMarket,
   isRole,
+  isPackFormat,
   rulebookScopeForCategory,
   type Market,
   type Rulebook,
@@ -192,7 +193,8 @@ async function callAI(system: string, userText: string, images: ImageInput[]) {
 async function applyRulebook(
   parsed: { category?: string; fields?: Array<{ label: string; value: string | null; status: string; suggestedFix?: string | null }> },
   markets: Market[],
-  role: unknown
+  role: unknown,
+  pack: unknown
 ) {
   const scope = rulebookScopeForCategory(parsed.category);
   if (!scope || !Array.isArray(parsed.fields)) return { findings: [], rulebook: null };
@@ -212,6 +214,7 @@ async function applyRulebook(
       category: parsed.category ?? "",
       markets,
       role: isRole(role) ? role : null,
+      pack: isPackFormat(pack) ? pack : null,
     },
     rulebook
   );
@@ -229,6 +232,7 @@ async function applyRulebook(
     version: rulebook.version,
     status: rulebook.status,
     markets,
+    pack: isPackFormat(pack) ? pack : null,
     checkedAt: new Date().toISOString(),
   };
   return { findings, rulebook: stamp };
@@ -240,7 +244,7 @@ serve(async (req) => {
   }
 
   try {
-    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role, signupId } = await req.json();
+    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role, pack, signupId } = await req.json();
     const requestedMarkets: Market[] = Array.isArray(rawMarkets) ? [...new Set(rawMarkets.filter(isMarket))] : [];
     const markets = requestedMarkets.length ? requestedMarkets : DEFAULT_MARKETS;
 
@@ -337,7 +341,7 @@ serve(async (req) => {
       );
     }
 
-    const { findings, rulebook } = await applyRulebook(parsed, markets, role);
+    const { findings, rulebook } = await applyRulebook(parsed, markets, role, pack);
     parsed.findings = findings;
     parsed.rulebook = rulebook;
 

@@ -153,6 +153,7 @@ export type Database = {
           nano: boolean | null
           net_quantity: string | null
           nutrition_json: Json | null
+          pack_format: string | null
           odoo_synced_at: string | null
           pack: string | null
           packaged_protective_atmosphere: boolean | null
@@ -193,6 +194,7 @@ export type Database = {
           nano?: boolean | null
           net_quantity?: string | null
           nutrition_json?: Json | null
+          pack_format?: string | null
           odoo_synced_at?: string | null
           pack?: string | null
           packaged_protective_atmosphere?: boolean | null
@@ -233,6 +235,7 @@ export type Database = {
           nano?: boolean | null
           net_quantity?: string | null
           nutrition_json?: Json | null
+          pack_format?: string | null
           odoo_synced_at?: string | null
           pack?: string | null
           packaged_protective_atmosphere?: boolean | null

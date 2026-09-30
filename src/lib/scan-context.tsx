@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import type { ScanChanges } from "./scan-diff";
 import { findAllergensInText, findFragranceAllergensInIngredients } from "./allergens";
-import type { Market, Role, RuleFinding, RulebookStamp } from "../../supabase/functions/_shared/rule-engine";
+import type { Market, PackFormat, Role, RuleFinding, RulebookStamp } from "../../supabase/functions/_shared/rule-engine";
 
-export type { Market, Role, RuleFinding, RulebookStamp };
+export type { Market, PackFormat, Role, RuleFinding, RulebookStamp };
 
 // Four-state field status, replacing a binary found/missing model:
 //   verified       — clearly visible, extracted with high confidence
@@ -70,6 +70,8 @@ export interface ScanOptions {
   // rule engine so only the relevant markets' rules are checked.
   markets: Market[];
   role: Role | null;
+  // What it's packed in: decides the Article 19 small-pack exemptions.
+  pack: PackFormat | null;
 }
 
 interface ScanContextType {
@@ -82,7 +84,7 @@ interface ScanContextType {
   reset: () => void;
 }
 
-const defaultOptions: ScanOptions = { isSeasonal: false, seasonTag: null, markets: ["GB"], role: null };
+const defaultOptions: ScanOptions = { isSeasonal: false, seasonTag: null, markets: ["GB"], role: null, pack: null };
 
 const ScanContext = createContext<ScanContextType | null>(null);
 

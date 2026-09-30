@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { RefreshCw, FileImage, CheckCircle, AlertTriangle, XCircle, Lock, History } from "lucide-react";
 import { useAdminSession } from "@/hooks/use-admin-session";
 import BrandAlertsPanel from "@/components/admin/BrandAlertsPanel";
+import RulebookPanel from "@/components/admin/RulebookPanel";
 import { lockScanAsVersion, getPendingRequests, decideChangeRequest, getLockedVersionByScan, type ChangeRequest, type ProductVersion } from "@/lib/version-lock";
 import { useSeo } from "@/hooks/use-seo";
 
@@ -256,6 +257,7 @@ const AdminLeadsPage = () => {
           <TabsTrigger value="approvals">
             Approvals {pendingRequests.length > 0 && <Badge className="ml-1.5 h-4 px-1 text-[10px]">{pendingRequests.length}</Badge>}
           </TabsTrigger>
+          <TabsTrigger value="rulebook">Rulebook</TabsTrigger>
           <TabsTrigger value="brand-alerts">
             Brand alerts {openBrandAlerts > 0 && <Badge className="ml-1.5 h-4 px-1 text-[10px]">{openBrandAlerts}</Badge>}
           </TabsTrigger>
@@ -383,6 +385,10 @@ const AdminLeadsPage = () => {
               </Card>
             );
           })}
+        </TabsContent>
+
+        <TabsContent value="rulebook">
+          <RulebookPanel />
         </TabsContent>
 
         <TabsContent value="brand-alerts" forceMount className="data-[state=inactive]:hidden">

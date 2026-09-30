@@ -7,6 +7,7 @@ import {
   DEFAULT_MARKETS,
   evaluateRules,
   isMarket,
+  isPackFormat,
   isRole,
   rulebookScopeForCategory,
   type Market,
@@ -27,7 +28,7 @@ const json = (body: unknown, status = 200) =>
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const { draft, category, markets: rawMarkets, role } = await req.json();
+    const { draft, category, markets: rawMarkets, role, pack } = await req.json();
     const requested: Market[] = Array.isArray(rawMarkets) ? [...new Set(rawMarkets.filter(isMarket))] : [];
     const markets = requested.length ? requested : DEFAULT_MARKETS;
 
@@ -43,6 +44,7 @@ Deno.serve(async (req) => {
         category,
         markets,
         role: isRole(role) ? role : null,
+        pack: isPackFormat(pack) ? pack : null,
       },
       rulebook
     );
@@ -51,6 +53,7 @@ Deno.serve(async (req) => {
       version: rulebook.version,
       status: rulebook.status,
       markets,
+      pack: isPackFormat(pack) ? pack : null,
       checkedAt: new Date().toISOString(),
     };
     return json({ findings, rulebook: stamp });
