@@ -12,18 +12,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { RefreshCw, FileImage, CheckCircle, AlertTriangle, XCircle, Lock, History } from "lucide-react";
-import type { Session } from "@supabase/supabase-js";
+import { useAdminSession } from "@/hooks/use-admin-session";
 import { lockScanAsVersion, getPendingRequests, decideChangeRequest, getLockedVersionByScan, type ChangeRequest, type ProductVersion } from "@/lib/version-lock";
 import { useSeo } from "@/hooks/use-seo";
 
 const AdminLeadsPage = () => {
   useSeo({ title: "Admin | Labelring", description: "Labelring admin.", noindex: true });
 
-  const [session, setSession] = useState<Session | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const { session, isAdmin, loading: authLoading } = useAdminSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [submitting, setSubmitting] = useState(false);
 
   const [scans, setScans] = useState<any[]>([]);
@@ -48,15 +46,6 @@ const AdminLeadsPage = () => {
   const [decisionNote, setDecisionNote] = useState("");
   const [decisionPromote, setDecisionPromote] = useState(true);
   const [decisionSubmitting, setDecisionSubmitting] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setAuthLoading(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => sub.subscription.unsubscribe();
-  }, []);
 
   const fetchScans = async () => {
     setLoadingScans(true);
@@ -163,28 +152,18 @@ const AdminLeadsPage = () => {
   };
 
   useEffect(() => {
-    if (session) {
+    if (isAdmin) {
       fetchScans();
       fetchRequests();
     }
-  }, [session]);
+  }, [isAdmin]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/admin/leads` },
-        });
-        if (error) throw error;
-        toast.success("Account created — you're signed in.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
     } catch (err: any) {
       toast.error(err.message ?? "Authentication failed");
     } finally {
@@ -207,7 +186,7 @@ const AdminLeadsPage = () => {
           <div className="space-y-1">
             <h1 className="text-xl font-semibold">Admin sign in</h1>
             <p className="text-sm text-muted-foreground">
-              {mode === "signin" ? "Sign in to manage scans and approvals." : "Create the first admin account."}
+              Sign in to manage scans and approvals. Admin accounts are added by the team.
             </p>
           </div>
           <form onSubmit={handleAuth} className="space-y-3">
@@ -220,16 +199,27 @@ const AdminLeadsPage = () => {
               <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Working…" : mode === "signin" ? "Sign in" : "Create account"}
+              {submitting ? "Working…" : "Sign in"}
             </Button>
           </form>
-          <button
-            type="button"
-            className="text-xs text-muted-foreground underline"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          >
-            {mode === "signin" ? "Need an account? Create one" : "Already have an account? Sign in"}
-          </button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="max-w-sm mx-auto py-16">
+        <Card className="p-6 space-y-4">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold">No admin access</h1>
+            <p className="text-sm text-muted-foreground">
+              {session.user.email} isn't an admin account. Ask the team to add it, or sign in with a different account.
+            </p>
+          </div>
+          <Button variant="outline" className="w-full" onClick={handleSignOut}>
+            Sign out
+          </Button>
         </Card>
       </div>
     );

@@ -593,6 +593,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_public_label: {
+        Args: { p_id: string }
+        Returns: Json
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       reconcile_odoo_sync: {
         Args: Record<PropertyKey, never>
         Returns: undefined

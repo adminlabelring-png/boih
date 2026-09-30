@@ -195,18 +195,20 @@ const ScanProcessingPage = () => {
             rulebook_version: result.rulebook ? `${result.rulebook.scope} ${result.rulebook.version}` : null,
             rule_findings: result.findings.length ? (result.findings as any) : null,
           };
-          let { data: inserted, error: insertErr } = await supabase
+          // Visitors can save a scan but not read scans back, so the id is
+          // made here rather than returned by the insert.
+          const scanId = crypto.randomUUID();
+          let { error: insertErr } = await supabase
             .from("scans" as any)
-            .insert({ ...scanRow, ...rulebookColumns })
-            .select("id")
-            .single();
+            .insert({ id: scanId, ...scanRow, ...rulebookColumns });
           // The frontend and the database migration deploy separately; if
           // the rulebook columns don't exist yet, still save the scan.
           if (insertErr && /rulebook_version|rule_findings/.test(insertErr.message)) {
-            ({ data: inserted } = await supabase.from("scans" as any).insert(scanRow).select("id").single());
+            ({ error: insertErr } = await supabase.from("scans" as any).insert({ id: scanId, ...scanRow }));
           }
+          if (insertErr) console.warn("scan save failed", insertErr);
 
-          const newScanId = (inserted as any)?.id ?? null;
+          const newScanId = insertErr ? null : scanId;
           result.scanId = newScanId;
 
           // Check locked master version
