@@ -89,3 +89,41 @@ values
 ```
 
 Once all entries are loaded and signed off, reject `eu_allergens_2026` in that draft (the `fragrance_allergens` check then covers the new names) and publish. Great Britain hasn't adopted the expanded list, so keep `markets` to `EU` and `NI` unless that changes.
+
+## Source monitoring
+
+Every Monday, `pg_cron` checks the legal sources the rulebook cites (`source_watches`) and records any change in `source_change_alerts`, listing the rules and substances that cite that source. Nothing in the rulebook changes automatically.
+
+- **GB (legislation.gov.uk):** a hash of the provision's own text (Articles 4 and 19, Annexes II and III), so edits elsewhere in the regulation don't trigger it.
+- **EU:** EUR-Lex blocks automated requests, so the monitor asks the EU Publications Office for the latest consolidated version of Regulation (EC) 1223/2009 instead (e.g. `02009R1223-20260518`). A new consolidation means an amendment has been folded in; check what changed on EUR-Lex.
+
+The first run only records a baseline. Check the queue and the last run:
+
+```sql
+select w.label, a.detected_at, a.previous_signal, a.new_signal, a.affected_rules
+from source_change_alerts a join source_watches w on w.id = a.watch_id
+where a.status = 'open' order by a.detected_at desc;
+
+select label, last_checked_at, last_changed_at, last_error from source_watches order by label;
+```
+
+After reviewing a change (and, if needed, cloning the rulebook, editing the affected rules, re-verifying and publishing), close the alert:
+
+```sql
+update source_change_alerts
+set status = 'reviewed', reviewed_by = 'Jane Smith', reviewed_at = now(),
+    review_note = 'Annex III amendment adds entry 45; loaded into 2026.2.'
+where id = '<alert id>';
+```
+
+Use `status = 'dismissed'` for changes that don't affect the rules, such as editorial corrections.
+
+To add a source, insert a row into `source_watches` with its data URL and the `source_prefix` that rules use in `sources[].url`.
+
+## Saved labels on an older rulebook
+
+Each saved cosmetics label records the rulebook version it was checked against (`generated_labels.rulebook_version`). After publishing a new version, this lists the saved labels to re-check (for example, to contact those brands):
+
+```sql
+select * from labels_on_superseded_rulebook order by created_at desc;
+```

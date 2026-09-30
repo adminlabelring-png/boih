@@ -270,6 +270,9 @@ const GenerateLabelPage = () => {
           responsible_person: fields.responsiblePerson || null,
           eu_responsible_person: fields.euResponsiblePerson || null,
           markets: pack === "cosmetic" ? markets : null,
+          rulebook_version: rulebookFindings && draftCheck?.rulebook
+            ? `${draftCheck.rulebook.scope} ${draftCheck.rulebook.version}`
+            : null,
           certifications: fields.certifications || null,
           preview_text: preview || null,
           compliance_score: score,
