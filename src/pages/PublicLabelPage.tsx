@@ -42,13 +42,9 @@ const PublicLabelPage = () => {
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const { data, error } = await supabase
-        .from("generated_labels")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("get_public_label", { p_id: id });
       if (error || !data) setNotFound(true);
-      else setLabel(data as LabelRow);
+      else setLabel(data as unknown as LabelRow);
       setLoading(false);
     })();
   }, [id]);

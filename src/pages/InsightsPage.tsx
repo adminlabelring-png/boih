@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { Session } from "@supabase/supabase-js";
+import { useAdminSession } from "@/hooks/use-admin-session";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,13 +69,10 @@ const InsightsPage = () => {
     path: "/insights",
     image: `${window.location.origin}${INSIGHTS_HERO_IMAGE}`,
   });
-  const [session, setSession] = useState<Session | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const { session, isAdmin, loading: authLoading } = useAdminSession();
   const [showSignIn, setShowSignIn] = useState(false);
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [authSubmitting, setAuthSubmitting] = useState(false);
 
   const [posts, setPosts] = useState<Insight[]>([]);
@@ -96,20 +93,11 @@ const InsightsPage = () => {
     return () => URL.revokeObjectURL(url);
   }, [form.imageFile]);
 
-  const isAuthor = !!session;
+  const isAuthor = isAdmin;
   const authorDisplayName =
     (session?.user.user_metadata?.display_name as string | undefined) ||
     session?.user.email?.split("@")[0] ||
     "";
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setAuthLoading(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => sub.subscription.unsubscribe();
-  }, []);
 
   const fetchPosts = async () => {
     setLoadingPosts(true);
@@ -124,34 +112,15 @@ const InsightsPage = () => {
 
   useEffect(() => {
     fetchPosts();
-  }, [session]);
+  }, [isAdmin]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthSubmitting(true);
     try {
-      if (authMode === "signup") {
-        if (!name.trim()) {
-          toast.error("Please enter your name");
-          setAuthSubmitting(false);
-          return;
-        }
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/insights`,
-            data: { display_name: name.trim() },
-          },
-        });
-        if (error) throw error;
-        toast.success("Account created — you're signed in.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       setShowSignIn(false);
-      setName("");
       setEmail("");
       setPassword("");
     } catch (err: any) {
@@ -337,6 +306,13 @@ const InsightsPage = () => {
               Sign out
             </Button>
           </div>
+        ) : session ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {session.user.email} can't edit posts.
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              Sign out
+            </Button>
+          </div>
         ) : (
           !authLoading && (
             <Button variant="outline" size="sm" onClick={() => setShowSignIn((v) => !v)}>
@@ -346,28 +322,15 @@ const InsightsPage = () => {
         )}
       </div>
 
-      {!isAuthor && showSignIn && (
+      {!session && showSignIn && (
         <Card className="max-w-sm p-5 space-y-3">
           <div className="space-y-1">
             <h2 className="text-sm font-semibold">Author sign in</h2>
             <p className="text-xs text-muted-foreground">
-              {authMode === "signin" ? "Sign in to manage posts." : "Create your author account."}
+              Sign in to manage posts. Author accounts are added by the team.
             </p>
           </div>
           <form onSubmit={handleAuth} className="space-y-3">
-            {authMode === "signup" && (
-              <div className="space-y-1">
-                <Label htmlFor="insights-name" className="text-xs">
-                  Your name
-                </Label>
-                <Input
-                  id="insights-name"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-            )}
             <div className="space-y-1">
               <Label htmlFor="insights-email" className="text-xs">
                 Email
@@ -394,16 +357,9 @@ const InsightsPage = () => {
               />
             </div>
             <Button type="submit" size="sm" className="w-full" disabled={authSubmitting}>
-              {authSubmitting ? "Working…" : authMode === "signin" ? "Sign in" : "Create account"}
+              {authSubmitting ? "Working…" : "Sign in"}
             </Button>
           </form>
-          <button
-            type="button"
-            className="text-xs text-muted-foreground underline"
-            onClick={() => setAuthMode(authMode === "signin" ? "signup" : "signin")}
-          >
-            {authMode === "signin" ? "Need an account? Create one" : "Already have an account? Sign in"}
-          </button>
         </Card>
       )}
 

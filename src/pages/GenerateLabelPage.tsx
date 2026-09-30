@@ -255,9 +255,13 @@ const GenerateLabelPage = () => {
           ? fields.fragranceAllergens.join(", ") || null
           : fields.allergens || null;
 
-      const { data, error } = await supabase
+      // Visitors can save but not read the table back, so the id is made
+      // here rather than returned by the insert.
+      const id = crypto.randomUUID();
+      const { error } = await supabase
         .from("generated_labels")
         .insert({
+          id,
           brand_name: fields.brandName || null,
           product_name: fields.productName || null,
           category: fields.category || null,
@@ -301,11 +305,9 @@ const GenerateLabelPage = () => {
                 approved_at: new Date().toISOString(),
               }
             : {}),
-        })
-        .select("id")
-        .single();
+        });
       if (error) throw error;
-      return `${window.location.origin}/label/${data.id}`;
+      return `${window.location.origin}/label/${id}`;
     } finally {
       setSaving(false);
     }
