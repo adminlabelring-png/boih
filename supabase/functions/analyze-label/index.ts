@@ -12,6 +12,7 @@ import {
 } from "../_shared/rule-engine.ts";
 import { consumeQuota, dailyLimit, releaseQuota } from "../_shared/quota.ts";
 import { loadRulebook } from "../_shared/rulebook.ts";
+import { extrasToFields, type ScanExtras } from "../_shared/label-mapping.ts";
 
 // Free scans per person per day (by IP and by lead email). Set
 // SCAN_DAILY_LIMIT to change it; 0 turns the limit off.
@@ -57,10 +58,16 @@ Fields to extract:
 - Net Quantity (weight, volume, count)
 - Storage Instructions (also look for "Other information" sections)
 
-4. Detect the product category — one of: Cosmetic, Food, Beverage, Supplement, Household, Other.
+4. Also report, in "extras" (transcribe, don't judge):
+   - "function": the words on the pack that say what the product is or does (e.g. "Moisturising face cream", "Shampoo for dry hair"), or null if none.
+   - "claims": every marketing claim printed on the pack, exactly as written (e.g. "Paraben free", "Dermatologically tested", "100% natural", "Hypoallergenic", "Vegan"). Empty list if none.
+   - "languages": ISO 639-1 codes of every language the pack text is written in, excluding the ingredient list (e.g. ["en", "de", "fr"]).
+   - "symbols": any of these symbols you can see: "hand_in_book" (an open book with a hand pointing at it), "pao" (open jar with a number and M), "e_mark" (℮), "hourglass" (best-before symbol). Empty list if none.
+
+5. Detect the product category — one of: Cosmetic, Food, Beverage, Supplement, Household, Other.
    "Cosmetic" covers ALL personal care and cosmetic products — skincare, haircare (including hairsprays, shampoos, styling products), makeup, fragrance, oral care, personal-care aerosols, etc. Don't default to "Other" just because a product isn't facial skincare.
 
-5. For each field with status other than "verified", provide a brief suggestedFix — phrase it according to WHY the field isn't verified:
+6. For each field with status other than "verified", provide a brief suggestedFix — phrase it according to WHY the field isn't verified:
    - "not_verified" (blocked by incomplete coverage): phrase it as a request for an ADDITIONAL IMAGE, not an instruction to add something to the label (e.g. "Capture an additional image showing the base or opposite side — batch/lot numbers are commonly printed separately from the main label.").
    - "missing" (confirmed absent after full coverage): phrase it as what needs to be ADDED to the label.
    - "low_confidence": phrase it as what would help clarify (e.g. re-take with better lighting/focus on that area).
@@ -81,7 +88,13 @@ You MUST respond with ONLY valid JSON matching this exact schema (no markdown, n
       "status": "verified | low_confidence | not_verified | missing",
       "suggestedFix": "string or null"
     }
-  ]
+  ],
+  "extras": {
+    "function": "string or null",
+    "claims": ["string", ...],
+    "languages": ["string", ...],
+    "symbols": ["string", ...]
+  }
 }`;
 
 class AIError extends Error {
@@ -191,10 +204,16 @@ async function callAI(system: string, userText: string, images: ImageInput[]) {
 // scan: if the rulebook can't be loaded the scan still returns its fields,
 // just without rule findings.
 async function applyRulebook(
-  parsed: { category?: string; fields?: Array<{ label: string; value: string | null; status: string; suggestedFix?: string | null }> },
+  parsed: {
+    category?: string;
+    fields?: Array<{ label: string; value: string | null; status: string; suggestedFix?: string | null }>;
+    extras?: ScanExtras;
+  },
   markets: Market[],
   role: unknown,
-  pack: unknown
+  pack: unknown,
+  countries: string[],
+  coverageComplete: boolean
 ) {
   const scope = rulebookScopeForCategory(parsed.category);
   if (!scope || !Array.isArray(parsed.fields)) return { findings: [], rulebook: null };
@@ -210,11 +229,17 @@ async function applyRulebook(
 
   const findings = evaluateRules(
     {
-      fields: parsed.fields as Parameters<typeof evaluateRules>[0]["fields"],
+      // The extras (function, claims, languages, symbols) feed the rules
+      // without being shown as fields.
+      fields: [
+        ...(parsed.fields as Parameters<typeof evaluateRules>[0]["fields"]),
+        ...extrasToFields(parsed.extras, coverageComplete),
+      ],
       category: parsed.category ?? "",
       markets,
       role: isRole(role) ? role : null,
       pack: isPackFormat(pack) ? pack : null,
+      countries,
     },
     rulebook
   );
@@ -233,6 +258,7 @@ async function applyRulebook(
     status: rulebook.status,
     markets,
     pack: isPackFormat(pack) ? pack : null,
+    countries,
     checkedAt: new Date().toISOString(),
   };
   return { findings, rulebook: stamp };
@@ -244,7 +270,10 @@ serve(async (req) => {
   }
 
   try {
-    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role, pack, signupId } = await req.json();
+    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role, pack, countries: rawCountries, signupId } = await req.json();
+    const countries: string[] = Array.isArray(rawCountries)
+      ? [...new Set(rawCountries.filter((c): c is string => typeof c === "string" && /^[A-Z]{2}$/.test(c)))]
+      : [];
     const requestedMarkets: Market[] = Array.isArray(rawMarkets) ? [...new Set(rawMarkets.filter(isMarket))] : [];
     const markets = requestedMarkets.length ? requestedMarkets : DEFAULT_MARKETS;
 
@@ -341,7 +370,7 @@ serve(async (req) => {
       );
     }
 
-    const { findings, rulebook } = await applyRulebook(parsed, markets, role, pack);
+    const { findings, rulebook } = await applyRulebook(parsed, markets, role, pack, countries, coverageComplete);
     parsed.findings = findings;
     parsed.rulebook = rulebook;
 

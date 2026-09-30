@@ -44,7 +44,7 @@ import { checkDraft, generatePreview, suggestField, type DraftCheck } from "@/li
 import RuleFindings from "@/components/RuleFindings";
 import { rulebookStampText, findingStatusLabel } from "@/lib/rule-findings";
 import type { Market, PackFormat } from "@/lib/scan-context";
-import { PACK_OPTIONS } from "@/components/ScanIntake";
+import { EU_COUNTRY_OPTIONS, PACK_OPTIONS } from "@/components/ScanIntake";
 import { DRAFT_LABEL_DISCLAIMER } from "@/lib/disclaimer";
 import { supabase } from "@/integrations/supabase/client";
 import { getLeadId } from "@/lib/lead-tracker";
@@ -97,6 +97,9 @@ const GenerateLabelPage = () => {
   const [markets, setMarkets] = useState<Market[]>(() => scanHandoff?.rulebook?.markets ?? ["GB"]);
   // How it's packed (small-pack exemptions); optional.
   const [packFormat, setPackFormat] = useState<PackFormat | null>(() => scanHandoff?.rulebook?.pack ?? null);
+  // EU countries (language rules), when the EU is one of the markets.
+  const [countries, setCountries] = useState<string[]>(() => scanHandoff?.rulebook?.countries ?? []);
+  const euCountries = markets.includes("EU") ? countries : [];
   const [draftCheck, setDraftCheck] = useState<DraftCheck | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -171,7 +174,7 @@ const GenerateLabelPage = () => {
     }
     let cancelled = false;
     const t = setTimeout(() => {
-      checkDraft(fields, markets, packFormat)
+      checkDraft(fields, markets, packFormat, euCountries)
         .then((r) => !cancelled && setDraftCheck(r))
         .catch((e) => console.warn("rulebook check failed", e));
     }, 800);
@@ -180,7 +183,7 @@ const GenerateLabelPage = () => {
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(fields), pack, markets.join(","), packFormat]);
+  }, [JSON.stringify(fields), pack, markets.join(","), packFormat, euCountries.join(",")]);
 
   // Debounced preview generation — skips while a Suggest is in flight to avoid rate limits
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -278,6 +281,7 @@ const GenerateLabelPage = () => {
           eu_responsible_person: fields.euResponsiblePerson || null,
           markets: pack === "cosmetic" ? markets : null,
           pack_format: pack === "cosmetic" ? packFormat : null,
+          eu_countries: pack === "cosmetic" && euCountries.length ? euCountries : null,
           rulebook_version: rulebookFindings && draftCheck?.rulebook
             ? `${draftCheck.rulebook.scope} ${draftCheck.rulebook.version}`
             : null,
@@ -944,6 +948,34 @@ const GenerateLabelPage = () => {
                   </div>
                   <p className="text-[11px] text-muted-foreground">
                     One master label is checked against every market you pick.
+                  </p>
+                </div>
+              )}
+              {pack === "cosmetic" && markets.includes("EU") && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Which EU countries?</Label>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="EU countries">
+                    {EU_COUNTRY_OPTIONS.map((c) => {
+                      const active = countries.includes(c.value);
+                      return (
+                        <button
+                          key={c.value}
+                          type="button"
+                          aria-pressed={active}
+                          title={c.hint}
+                          onClick={() => setCountries(active ? countries.filter((x) => x !== c.value) : [...countries, c.value])}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                            active ? "border-primary bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-accent"
+                          )}
+                        >
+                          {c.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Each country decides the language of the function, precautions, date and quantity wording.
                   </p>
                 </div>
               )}

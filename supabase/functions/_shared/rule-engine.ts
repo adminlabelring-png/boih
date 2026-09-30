@@ -28,6 +28,8 @@ export type CheckType =
   | "prohibited_substances"
   | "restricted_substances"
   | "colourants"
+  | "language"
+  | "claims"
   | "advisory";
 
 export interface RuleSource {
@@ -118,6 +120,8 @@ export interface RulebookStamp {
   markets: Market[];
   // The pack answer the check assumed, if one was given.
   pack?: PackFormat | null;
+  // EU countries it was checked for (language rules).
+  countries?: string[];
   checkedAt: string;
 }
 
@@ -129,6 +133,8 @@ export interface EvaluationInput {
   // For date-dependent entries (e.g. new allergens from 1 August 2026).
   today?: string;
   pack?: PackFormat | null;
+  // EU countries the product will be sold in (ISO 3166 alpha-2, e.g. DE).
+  countries?: string[];
 }
 
 export const ALL_MARKETS: Market[] = ["GB", "NI", "EU"];
@@ -218,6 +224,7 @@ interface CheckContext {
   markets: Market[];
   role: Role | null;
   substances: Substance[];
+  countries: string[];
 }
 
 const officialNames = (s: Substance) => [s.inci_name, ...s.synonyms];
@@ -422,6 +429,48 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
     return { status: "pass", reason: `All ${used.length} colourants are on the permitted list.` };
   },
 
+  // Each EU country sets the language of the function, precautions, date
+  // and nominal content (Art. 19(5)). The value is the languages found on
+  // the label, e.g. "en, de".
+  language: ({ rule, value, countries }) => {
+    const required = (rule.params.required ?? {}) as Record<string, { language: string; name: string; country: string }>;
+    const chosen = countries.filter((c) => required[c]);
+    if (!chosen.length) {
+      return {
+        status: "review",
+        reason:
+          "Tell us which EU countries you'll sell in: each country decides the language of the function, precautions, date and nominal content (e.g. German in Germany, French in France).",
+      };
+    }
+    const found = value.toLowerCase().split(/[\s,;/]+/).filter(Boolean);
+    const missing = chosen.filter((c) => !found.includes(required[c].language));
+    if (missing.length) {
+      return {
+        status: "review",
+        reason: `No ${missing.map((c) => `${required[c].name} text found (needed for ${required[c].country})`).join("; ")}. The product function, precautions, date and nominal content must be in that language; INCI names aren't translated.`,
+      };
+    }
+    return {
+      status: "pass",
+      reason: `Text found in ${chosen.map((c) => `${required[c].name} for ${required[c].country}`).join(" and ")}.`,
+    };
+  },
+
+  // Marketing claims against the common criteria (Reg. 655/2013) and the
+  // Commission's technical document on claims: always a "check", with
+  // advice per kind of claim.
+  claims: ({ rule, value }) => {
+    const patterns = (rule.params.patterns ?? []) as { match: string; advice: string }[];
+    const hits = patterns
+      .map((p) => ({ ...p, found: value.match(new RegExp(p.match, "i"))?.[0] }))
+      .filter((p): p is { match: string; advice: string; found: string } => !!p.found);
+    if (!hits.length) return { status: "pass", reason: "No claims found that need evidence or special care." };
+    return {
+      status: "review",
+      reason: hits.map((h) => `"${h.found}": ${h.advice}`).join(" "),
+    };
+  },
+
   advisory: ({ rule, value }) => {
     const triggers = rule.params.only_if_any as string[] | undefined;
     if (triggers && value && !triggers.some((t) => value.toLowerCase().includes(t.toLowerCase()))) {
@@ -454,7 +503,8 @@ const evaluateRule = (
   markets: Market[],
   role: Role | null,
   substances: Substance[],
-  pack: PackFormat | null
+  pack: PackFormat | null,
+  countries: string[]
 ): RuleFinding | null => {
   const applicableMarkets = rule.markets.filter((m) => markets.includes(m));
   const sources = rule.sources.filter((s) => applicableMarkets.includes(s.market));
@@ -479,7 +529,7 @@ const evaluateRule = (
 
   // Advisories don't need the field to be readable.
   if (rule.check_type === "advisory") {
-    const outcome = checks.advisory({ rule, value, markets, role, substances });
+    const outcome = checks.advisory({ rule, value, markets, role, substances, countries });
     return outcome ? finding(outcome.status, outcome.reason, rule.fix_hint) : null;
   }
 
@@ -492,6 +542,10 @@ const evaluateRule = (
   }
 
   if (field.status === "missing") {
+    // Some fields are optional by nature (e.g. claims): absent is fine.
+    if (rule.params.absent_ok) {
+      return finding("pass", (rule.params.absent_note as string) ?? "None found.", null);
+    }
     // Pack-size exemptions (Art. 19): e.g. no nominal content needed under
     // 5 g / 5 ml, or ingredients on an enclosed leaflet when they can't fit.
     const notRequired = rule.params.not_required_for_pack as PackFormat[] | undefined;
@@ -500,6 +554,14 @@ const evaluateRule = (
     }
     const leafletOk = rule.params.leaflet_allowed_for_pack as PackFormat[] | undefined;
     if (pack && leafletOk?.includes(pack)) {
+      const symbols = fieldsByLabel.get("Pack Symbols")?.value?.toLowerCase() ?? "";
+      if (rule.rule_key !== "batch_code" && symbols.includes("hand_in_book")) {
+        return finding(
+          "pass",
+          "Not on the pack, which shows the hand-in-book symbol: fine if it's on the enclosed leaflet, tag or card.",
+          null
+        );
+      }
       return finding(
         "review",
         (rule.params.leaflet_note as string) ??
@@ -522,7 +584,7 @@ const evaluateRule = (
     return finding("fail", `Not found on the pack. ${rule.explanation}`, rule.fix_hint);
   }
 
-  const outcome = checks[rule.check_type]({ rule, value, markets, role, substances });
+  const outcome = checks[rule.check_type]({ rule, value, markets, role, substances, countries });
   if (!outcome) return null;
 
   if (field.status === "low_confidence") {
@@ -549,7 +611,7 @@ export const evaluateRules = (input: EvaluationInput, rulebook: Rulebook): RuleF
   const findings = rulebook.rules
     .filter((r) => r.verification_status !== "rejected")
     .filter((r) => r.markets.some((m) => markets.includes(m)))
-    .map((r) => evaluateRule(r, fieldsByLabel, markets, role, substances, input.pack ?? null))
+    .map((r) => evaluateRule(r, fieldsByLabel, markets, role, substances, input.pack ?? null, input.countries ?? []))
     .filter((f): f is RuleFinding => f !== null);
 
   return rankFindings(findings);
