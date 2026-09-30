@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import type { ScanChanges } from "./scan-diff";
 import { findAllergensInText, findFragranceAllergensInIngredients } from "./allergens";
+import type { RuleFinding, RulebookStamp } from "../../supabase/functions/_shared/rule-engine";
+
+export type { RuleFinding, RulebookStamp };
 
 // Four-state field status, replacing a binary found/missing model:
 //   verified       — clearly visible, extracted with high confidence
@@ -38,6 +41,11 @@ export interface ScanResult {
   totalCount: number;
   needsAttentionCount: number;
   coverage: CoverageAssessment;
+  // Deterministic checks against the versioned rulebook, ranked legal
+  // first. Empty when no rulebook covers the category (only cosmetics so
+  // far); rulebook is the version they were checked against.
+  findings: RuleFinding[];
+  rulebook: RulebookStamp | null;
   isSeasonal?: boolean;
   seasonTag?: string | null;
   changes?: ScanChanges | null;
@@ -140,7 +148,13 @@ const crossReferenceAllergens = (fields: DetectedField[], category: string): Det
 // Convert AI response into a ScanResult
 export const buildScanResult = (
   fileName: string,
-  aiData: { category: string; fields: DetectedField[]; coverage?: CoverageAssessment }
+  aiData: {
+    category: string;
+    fields: DetectedField[];
+    coverage?: CoverageAssessment;
+    findings?: RuleFinding[];
+    rulebook?: RulebookStamp | null;
+  }
 ): ScanResult => {
   const coverage: CoverageAssessment = aiData.coverage ?? {
     isComplete: false,
@@ -167,6 +181,8 @@ export const buildScanResult = (
     totalCount: fields.length,
     needsAttentionCount: fields.filter((f) => f.status !== "verified").length,
     coverage,
+    findings: Array.isArray(aiData.findings) ? aiData.findings : [],
+    rulebook: aiData.rulebook ?? null,
   };
 };
 
@@ -273,5 +289,7 @@ export const generateMockResult = (fileName: string): ScanResult => {
       missingAreas: ["back-of-pack", "base", "opposite side"],
       note: "Only the front label is visible in the submitted image; the back-of-pack, base and opposite side were not captured.",
     },
+    findings: [],
+    rulebook: null,
   };
 };

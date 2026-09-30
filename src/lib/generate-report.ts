@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import { ScanResult, DetectedField, getOverallAssessment, getAssessmentSummary } from "./scan-context";
+import { findingStatusLabel, rulebookStampText } from "./rule-findings";
 
 const statusLabel = (status: DetectedField["status"]) => {
   switch (status) {
@@ -93,6 +94,38 @@ export const generateComplianceReport = (result: ScanResult) => {
   addText(assessment.detail, 14, y, { fontSize: 10, color: [80, 80, 80] });
   y += 14;
 
+  // Regulatory checks — deterministic rule results, legal first
+  if (result.rulebook && result.findings.length > 0) {
+    if (y > 250) { doc.addPage(); y = 20; }
+    addText("Regulatory Checks", 14, y, { fontSize: 14, fontStyle: "bold", color: [30, 64, 120] });
+    y += 8;
+    doc.line(14, y, pageWidth - 14, y);
+    y += 8;
+
+    const findingColor = (status: string): [number, number, number] =>
+      status === "fail" ? [200, 50, 50] : status === "review" ? [200, 150, 0] : status === "pass" ? [34, 139, 34] : [110, 110, 110];
+
+    for (const [severity, heading] of [["legal", "Legal requirements"], ["best_practice", "Best practice"]] as const) {
+      const group = result.findings.filter((f) => f.severity === severity);
+      if (group.length === 0) continue;
+      if (y > 260) { doc.addPage(); y = 20; }
+      addText(heading, 14, y, { fontSize: 11, fontStyle: "bold", color: [80, 80, 80] });
+      y += 7;
+      for (const f of group) {
+        if (y > 255) { doc.addPage(); y = 20; }
+        addText(`${f.title} — ${findingStatusLabel(f.status)}`, 14, y, { fontSize: 10, fontStyle: "bold", color: findingColor(f.status) });
+        y += 5;
+        const detail = [f.reason, f.status !== "pass" ? f.fix : null, f.sources.map((s) => `${s.market} ${s.clause}`).join("; ")]
+          .filter(Boolean)
+          .join("\n");
+        const lines = doc.splitTextToSize(detail, pageWidth - 34);
+        addText(lines.join("\n"), 20, y, { fontSize: 9, color: [80, 80, 80], maxWidth: pageWidth - 34 });
+        y += lines.length * 4.5 + 4;
+      }
+    }
+    y += 6;
+  }
+
   // Detected fields
   if (y > 250) { doc.addPage(); y = 20; }
   addText("Detected Fields", 14, y, { fontSize: 14, fontStyle: "bold", color: [30, 64, 120] });
@@ -145,7 +178,8 @@ export const generateComplianceReport = (result: ScanResult) => {
   const disclaimer = result.coverage.isComplete
     ? "This is an automated label review. Final compliance should be verified against official guidelines."
     : "This assessment is based only on the visible areas of the submitted packaging. Information identified as \"Not Verified\" may exist elsewhere on the product and should not be interpreted as missing without additional images.";
-  const disclaimerLines = doc.splitTextToSize(disclaimer, pageWidth - 36);
+  const stamp = result.rulebook ? ` ${rulebookStampText(result.rulebook, result.findings)}` : "";
+  const disclaimerLines = doc.splitTextToSize(disclaimer + stamp, pageWidth - 36);
   doc.setFillColor(245, 245, 245);
   doc.rect(14, y - 4, pageWidth - 28, disclaimerLines.length * 4 + 8, "F");
   addText(disclaimerLines.join("\n"), 16, y + 4, { fontSize: 8, color: [120, 120, 120], maxWidth: pageWidth - 36 });

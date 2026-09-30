@@ -160,7 +160,7 @@ const ScanProcessingPage = () => {
           const images = uploaded.some((u) => u.path) ? uploaded : null;
 
           const params = new URLSearchParams(window.location.search);
-          const { data: inserted } = await supabase.from("scans" as any).insert({
+          const scanRow = {
             file_name: primary.file_name,
             file_path: primary.path,
             mime_type: primary.mime_type,
@@ -181,7 +181,21 @@ const ScanProcessingPage = () => {
             compared_to_scan_id: result.changes?.comparedToScanId ?? null,
             changes_detected: result.changes ?? null,
             coverage_assessment: result.coverage as any,
-          }).select("id").single();
+          };
+          const rulebookColumns = {
+            rulebook_version: result.rulebook ? `${result.rulebook.scope} ${result.rulebook.version}` : null,
+            rule_findings: result.findings.length ? (result.findings as any) : null,
+          };
+          let { data: inserted, error: insertErr } = await supabase
+            .from("scans" as any)
+            .insert({ ...scanRow, ...rulebookColumns })
+            .select("id")
+            .single();
+          // The frontend and the database migration deploy separately; if
+          // the rulebook columns don't exist yet, still save the scan.
+          if (insertErr && /rulebook_version|rule_findings/.test(insertErr.message)) {
+            ({ data: inserted } = await supabase.from("scans" as any).insert(scanRow).select("id").single());
+          }
 
           const newScanId = (inserted as any)?.id ?? null;
           result.scanId = newScanId;

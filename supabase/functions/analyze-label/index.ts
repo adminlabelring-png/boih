@@ -1,4 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  DEFAULT_MARKETS,
+  evaluateRules,
+  isMarket,
+  isRole,
+  rulebookScopeForCategory,
+  type Market,
+  type Rulebook,
+  type RulebookStamp,
+} from "../_shared/rule-engine.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,7 +17,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are a product label compliance analyst. You receive one or more images of a single product's packaging — often different sides or faces of the same item (front, ingredients/nutrition panel, back-of-pack, base, etc), submitted together as one scan.
+const SYSTEM_PROMPT = `You are a product label reader. Your job is to read and transcribe what is printed on the packaging — not to judge whether it is compliant; that is decided separately by deterministic rules from the text you return. Transcribe values exactly as printed (especially the full ingredient list and addresses): do not correct, summarise, translate or fill in anything you cannot read.
+
+You receive one or more images of a single product's packaging — often different sides or faces of the same item (front, ingredients/nutrition panel, back-of-pack, base, etc), submitted together as one scan.
 
 CRITICAL RULE: you may only report a field's status as "missing" if you have confirmed you can see the ENTIRE product packaging (all sides, the base, and the top/shoulder where applicable) across ALL submitted images combined. If you cannot see enough of the packaging to be sure, use "not_verified" instead — never guess "missing" from partial coverage. Getting this distinction right is the single most important part of your job: a false "missing" on a compliance tool causes real harm to a business relying on it.
 
@@ -168,13 +181,118 @@ async function callAI(system: string, userText: string, images: ImageInput[]) {
   return callOpenRouter(system, userText, images);
 }
 
+// The rulebook changes rarely (a new version is a reviewed, published
+// event), so cache it per warm instance rather than query on every scan.
+const RULEBOOK_TTL_MS = 5 * 60 * 1000;
+const rulebookCache = new Map<string, { at: number; rulebook: Rulebook | null }>();
+
+// Current rulebook for a scope: the published version if there is one,
+// otherwise the latest draft (whose results the app labels provisional).
+async function loadRulebook(scope: "cosmetics"): Promise<Rulebook | null> {
+  const cached = rulebookCache.get(scope);
+  if (cached && Date.now() - cached.at < RULEBOOK_TTL_MS) return cached.rulebook;
+
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) throw new Error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured");
+  const db = createClient(url, key, { auth: { persistSession: false } });
+
+  const { data: versions, error: vErr } = await db
+    .from("rulebook_versions")
+    .select("id, version, status, created_at")
+    .eq("scope", scope)
+    .in("status", ["published", "draft"])
+    .order("created_at", { ascending: false });
+  if (vErr) throw vErr;
+
+  const current =
+    versions?.find((v) => v.status === "published") ?? versions?.find((v) => v.status === "draft");
+  if (!current) {
+    rulebookCache.set(scope, { at: Date.now(), rulebook: null });
+    return null;
+  }
+
+  const [rules, substances] = await Promise.all([
+    db
+      .from("rules")
+      .select("rule_key, title, product_scope, markets, field, check_type, params, severity, explanation, fix_hint, sources, verification_status")
+      .eq("rulebook_version_id", current.id),
+    db
+      .from("substances")
+      .select("list_type, inci_name, synonyms, markets, verification_status")
+      .eq("rulebook_version_id", current.id),
+  ]);
+  if (rules.error) throw rules.error;
+  if (substances.error) throw substances.error;
+
+  const rulebook: Rulebook = {
+    scope,
+    version: current.version,
+    status: current.status,
+    rules: rules.data ?? [],
+    substances: substances.data ?? [],
+  };
+  rulebookCache.set(scope, { at: Date.now(), rulebook });
+  return rulebook;
+}
+
+// Runs the deterministic rules over what the model read. Never fails the
+// scan: if the rulebook can't be loaded the scan still returns its fields,
+// just without rule findings.
+async function applyRulebook(
+  parsed: { category?: string; fields?: Array<{ label: string; value: string | null; status: string; suggestedFix?: string | null }> },
+  markets: Market[],
+  role: unknown
+) {
+  const scope = rulebookScopeForCategory(parsed.category);
+  if (!scope || !Array.isArray(parsed.fields)) return { findings: [], rulebook: null };
+
+  let rulebook: Rulebook | null;
+  try {
+    rulebook = await loadRulebook(scope);
+  } catch (e) {
+    console.error("rulebook load failed:", e);
+    return { findings: [], rulebook: null };
+  }
+  if (!rulebook) return { findings: [], rulebook: null };
+
+  const findings = evaluateRules(
+    {
+      fields: parsed.fields as Parameters<typeof evaluateRules>[0]["fields"],
+      category: parsed.category ?? "",
+      markets,
+      role: isRole(role) ? role : null,
+    },
+    rulebook
+  );
+
+  // Where a rule covers a field the model confirmed absent, the fix comes
+  // from the rule (tied to its source clause), not the model's own advice.
+  parsed.fields = parsed.fields.map((f) => {
+    if (f.status !== "missing") return f;
+    const ruleFix = findings.find((r) => r.field === f.label && r.fix && r.status !== "pass")?.fix;
+    return ruleFix ? { ...f, suggestedFix: ruleFix } : f;
+  });
+
+  const stamp: RulebookStamp = {
+    scope: rulebook.scope,
+    version: rulebook.version,
+    status: rulebook.status,
+    markets,
+    checkedAt: new Date().toISOString(),
+  };
+  return { findings, rulebook: stamp };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { images: rawImages, isSeasonal, seasonTag } = await req.json();
+    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role } = await req.json();
+    const requestedMarkets: Market[] = Array.isArray(rawMarkets) ? [...new Set(rawMarkets.filter(isMarket))] : [];
+    const markets = requestedMarkets.length ? requestedMarkets : DEFAULT_MARKETS;
 
     if (!Array.isArray(rawImages) || rawImages.length === 0) {
       return new Response(
@@ -254,6 +372,10 @@ serve(async (req) => {
         f?.status === "missing" ? { ...f, status: "not_verified" } : f
       );
     }
+
+    const { findings, rulebook } = await applyRulebook(parsed, markets, role);
+    parsed.findings = findings;
+    parsed.rulebook = rulebook;
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
