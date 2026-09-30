@@ -161,6 +161,8 @@ export type Database = {
           product_name: string | null
           quid_percent: string | null
           responsible_person: string | null
+          eu_responsible_person: string | null
+          markets: string[] | null
           signup_id: string | null
           storage_instructions: string | null
           warnings_json: Json | null
@@ -195,6 +197,8 @@ export type Database = {
           product_name?: string | null
           quid_percent?: string | null
           responsible_person?: string | null
+          eu_responsible_person?: string | null
+          markets?: string[] | null
           signup_id?: string | null
           storage_instructions?: string | null
           warnings_json?: Json | null
@@ -229,6 +233,8 @@ export type Database = {
           product_name?: string | null
           quid_percent?: string | null
           responsible_person?: string | null
+          eu_responsible_person?: string | null
+          markets?: string[] | null
           signup_id?: string | null
           storage_instructions?: string | null
           warnings_json?: Json | null

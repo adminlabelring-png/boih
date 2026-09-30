@@ -16,6 +16,7 @@ interface LabelRow {
   batch_number: string | null;
   best_before: string | null;
   responsible_person: string | null;
+  eu_responsible_person: string | null;
   certifications: string | null;
   preview_text: string | null;
   compliance_score: number;
@@ -147,6 +148,7 @@ const PublicLabelPage = () => {
             <Row label="Batch number" value={label.batch_number} />
             <Row label="Country of origin" value={label.country_of_origin} />
             <Row label="Responsible person" value={label.responsible_person} />
+            <Row label="Responsible person (EU / NI)" value={label.eu_responsible_person} />
             <Row label="Certifications" value={label.certifications} />
           </div>
 
