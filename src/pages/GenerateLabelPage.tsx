@@ -40,6 +40,7 @@ import {
   FRAGRANCE_ALLERGEN_THRESHOLD,
 } from "@/lib/allergens";
 import { generatePreview, suggestField } from "@/lib/generate-label";
+import { DRAFT_LABEL_DISCLAIMER } from "@/lib/disclaimer";
 import { supabase } from "@/integrations/supabase/client";
 import { getLeadId } from "@/lib/lead-tracker";
 import { cn } from "@/lib/utils";
@@ -63,9 +64,9 @@ const NUTRITION_ROWS: { key: keyof NutritionTable; label: string; placeholder: s
 
 const GenerateLabelPage = () => {
   useSeo({
-    title: "Create a Compliant Product Label | Labelring",
+    title: "Create a Product Label Checked Against UK Rules | Labelring",
     description:
-      "Generate a UK-compliant digital product label with built-in ingredient, allergen, nutrition, and regulatory checks for food and cosmetics.",
+      "Build a digital product label checked against current UK labelling regulations, with ingredient, allergen, nutrition and regulatory checks for food and cosmetics.",
     path: "/generate",
   });
 
@@ -116,21 +117,11 @@ const GenerateLabelPage = () => {
   );
 
   const AI_FIELDS: (keyof LabelFields)[] = useMemo(() => {
-    const base: (keyof LabelFields)[] = [
-      "brandName",
-      "productName",
-      "ingredients",
-      "allergens",
-      "countryOfOrigin",
-      "netQuantity",
-      "batchNumber",
-      "bestBefore",
-      "responsiblePerson",
-      "certifications",
-      "storageInstructions",
-    ];
-    if (pack === "food") base.push("quidPercent", "alcoholAbv");
-    if (pack === "cosmetic") base.push("paoMonths", "instructionsForUse");
+    // AI only suggests wording. Product facts (ingredients, quantities,
+    // dates, codes, addresses, nutrition, certifications) must come from
+    // the brand: an invented value on a printed label is a liability.
+    const base: (keyof LabelFields)[] = ["brandName", "productName", "storageInstructions"];
+    if (pack === "cosmetic") base.push("instructionsForUse");
     return base;
   }, [pack]);
 
@@ -175,7 +166,7 @@ const GenerateLabelPage = () => {
       } catch (e) {
         const status = (e as { status?: number })?.status;
         const message = e instanceof Error ? e.message : "";
-        if (status === 429) toast.error("Rate limit — try again in a moment.");
+        if (status === 429) toast.error(message || "Rate limit — try again in a moment.");
         else if (status === 402) toast.error("AI credits exhausted.");
         else toast.error(message || "Couldn't generate suggestion");
       } finally {
@@ -185,22 +176,6 @@ const GenerateLabelPage = () => {
     [fields, pack]
   );
 
-  const handleSuggestNutrition = useCallback(async () => {
-    setBusyField("nutrition");
-    try {
-      const raw = await suggestField("nutrition" as keyof LabelFields, fields, pack);
-      const parsed = JSON.parse(raw);
-      set("nutrition", parsed as NutritionTable);
-    } catch (e) {
-      const status = (e as { status?: number })?.status;
-      const message = e instanceof Error ? e.message : "";
-      if (status === 429) toast.error("Rate limit — try again in a moment.");
-      else if (status === 402) toast.error("AI credits exhausted.");
-      else toast.error(message || "Couldn't suggest nutrition table");
-    } finally {
-      setBusyField(null);
-    }
-  }, [fields, pack]);
 
   const scoreColor =
     score >= 80
@@ -356,11 +331,7 @@ const GenerateLabelPage = () => {
 
     doc.setFontSize(8);
     doc.setTextColor(120, 120, 120);
-    doc.text(
-      "Automated draft based on UK FIC / cosmetic guidance. Verify before print.",
-      14,
-      290
-    );
+    doc.text(doc.splitTextToSize(DRAFT_LABEL_DISCLAIMER, 182), 14, 284);
 
     const filename =
       (fields.productName || "label").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
@@ -739,19 +710,7 @@ const GenerateLabelPage = () => {
                 <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Nutrition (per 100g)
                 </h2>
-                <button
-                  type="button"
-                  onClick={handleSuggestNutrition}
-                  disabled={busyField === "nutrition"}
-                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
-                >
-                  {busyField === "nutrition" ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3 w-3" />
-                  )}
-                  Suggest full table
-                </button>
+                <span className="text-[11px] text-muted-foreground">From your lab analysis or recipe calculation</span>
               </div>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 {NUTRITION_ROWS.map((row) => (
@@ -895,8 +854,7 @@ const GenerateLabelPage = () => {
           </div>
 
           <p className="text-[11px] text-muted-foreground">
-            AI-assisted draft based on UK FIC / cosmetic guidance. Verify against your
-            official regulatory advice before print.
+            {DRAFT_LABEL_DISCLAIMER}
           </p>
         </div>
       </div>

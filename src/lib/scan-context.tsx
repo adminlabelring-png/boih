@@ -204,12 +204,12 @@ export const getOverallAssessment = (result: ScanResult): OverallAssessment => {
     return {
       tone: "needs-images",
       banner: "More Images Needed",
-      detail: `Verified Compliance: ${percent}% · Packaging Coverage: Partial`,
+      detail: `Label fields verified: ${percent}% · Packaging Coverage: Partial`,
     };
   }
   return {
     tone: percent >= 80 ? "good" : "attention",
-    banner: `${percent}% Verified Compliance`,
+    banner: `${percent}% of Label Fields Verified`,
     detail: "Packaging Coverage: Complete",
   };
 };

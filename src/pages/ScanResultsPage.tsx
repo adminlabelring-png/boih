@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useScan, DetectedField, getOverallAssessment, getAssessmentSummary } from "@/lib/scan-context";
 import { generateComplianceReport } from "@/lib/generate-report";
 import RuleFindings from "@/components/RuleFindings";
+import { CHECK_DISCLAIMER } from "@/lib/disclaimer";
 import { cn } from "@/lib/utils";
 import { useSeo } from "@/hooks/use-seo";
 
@@ -457,8 +458,8 @@ const ScanResultsPage = () => {
       >
         <p className="text-xs text-muted-foreground text-center">
           {result.coverage.isComplete
-            ? "This is an automated label review to help identify missing or unclear information. Final compliance should be verified against official guidelines."
-            : "This assessment is based only on the visible areas of the submitted packaging. Information identified as \"Not Verified\" may exist elsewhere on the product and should not be interpreted as missing without additional images."}
+            ? CHECK_DISCLAIMER
+            : `This assessment is based only on the visible areas of the submitted packaging. Information identified as "Not Verified" may exist elsewhere on the product and should not be interpreted as missing without additional images. ${CHECK_DISCLAIMER}`}
         </p>
       </motion.div>
 

@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   DEFAULT_MARKETS,
   evaluateRules,
@@ -10,6 +9,11 @@ import {
   type Rulebook,
   type RulebookStamp,
 } from "../_shared/rule-engine.ts";
+import { consumeQuota, dailyLimit, releaseQuota, serviceClient } from "../_shared/quota.ts";
+
+// Free scans per person per day (by IP and by lead email). Set
+// SCAN_DAILY_LIMIT to change it; 0 turns the limit off.
+const SCAN_LIMIT = dailyLimit("SCAN_DAILY_LIMIT", 3);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -192,10 +196,7 @@ async function loadRulebook(scope: "cosmetics"): Promise<Rulebook | null> {
   const cached = rulebookCache.get(scope);
   if (cached && Date.now() - cached.at < RULEBOOK_TTL_MS) return cached.rulebook;
 
-  const url = Deno.env.get("SUPABASE_URL");
-  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured");
-  const db = createClient(url, key, { auth: { persistSession: false } });
+  const db = serviceClient();
 
   const { data: versions, error: vErr } = await db
     .from("rulebook_versions")
@@ -290,7 +291,7 @@ serve(async (req) => {
   }
 
   try {
-    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role } = await req.json();
+    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role, signupId } = await req.json();
     const requestedMarkets: Market[] = Array.isArray(rawMarkets) ? [...new Set(rawMarkets.filter(isMarket))] : [];
     const markets = requestedMarkets.length ? requestedMarkets : DEFAULT_MARKETS;
 
@@ -298,6 +299,17 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "images (non-empty array) is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const quota = await consumeQuota(req, "scan", SCAN_LIMIT, signupId);
+    if (!quota.allowed) {
+      return new Response(
+        JSON.stringify({
+          code: "daily_limit",
+          error: `You've used your ${quota.limit} free scans for today. Come back tomorrow, or book a label review with our team.`,
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -324,6 +336,8 @@ serve(async (req) => {
     try {
       content = await callAI(SYSTEM_PROMPT + seasonalAddendum, userText, images);
     } catch (e) {
+      // The person got nothing for this scan, so don't count it.
+      await releaseQuota("scan", quota);
       if (e instanceof AIError) {
         if (e.status === 429) {
           return new Response(
@@ -351,6 +365,7 @@ serve(async (req) => {
       const cleaned = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
       parsed = JSON.parse(cleaned);
     } catch {
+      await releaseQuota("scan", quota);
       console.error("Failed to parse AI response:", content);
       throw new Error("Failed to parse AI analysis result");
     }

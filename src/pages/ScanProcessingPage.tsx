@@ -32,6 +32,10 @@ const fileToBase64 = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
+// The free daily scan allowance is used up: not a failure to paper over
+// with demo results, but something to tell the person plainly.
+class DailyLimitError extends Error {}
+
 const displayFileName = (files: File[]): string =>
   files.length > 1 ? `${files[0].name} +${files.length - 1} more` : files[0].name;
 
@@ -83,6 +87,7 @@ const ScanProcessingPage = () => {
               images,
               isSeasonal: options.isSeasonal,
               seasonTag: options.seasonTag,
+              signupId: getSignupId(),
             },
             signal: abort.signal,
           })
@@ -95,7 +100,8 @@ const ScanProcessingPage = () => {
           if (ctx && typeof ctx.json === "function") {
             try {
               const body = await ctx.clone().json();
-              throw new Error(typeof body?.error === "string" ? body.error : error.message);
+              const message = typeof body?.error === "string" ? body.error : error.message;
+              throw body?.code === "daily_limit" ? new DailyLimitError(message) : new Error(message);
             } catch (parseErr) {
               if (parseErr instanceof Error && parseErr.message !== error.message) throw parseErr;
             }
@@ -245,6 +251,11 @@ const ScanProcessingPage = () => {
           navigate("/scan/results", { replace: true });
         }, 500);
       } catch (err) {
+        if (err instanceof DailyLimitError) {
+          toast.error(err.message, { duration: 10000 });
+          navigate("/scan", { replace: true });
+          return;
+        }
         console.error("Analysis failed, using fallback:", err);
         toast.error("AI analysis failed — showing demo results instead");
 
