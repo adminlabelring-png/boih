@@ -64,31 +64,37 @@ select clone_rulebook_version(
 
 Every scan stores the rulebook version it was checked against (`scans.rulebook_version`), so older results stay explainable.
 
-## Loading the expanded EU fragrance allergen list (Regulation (EU) 2023/1545)
+## Official annex data (Annexes II–VI)
 
-The seeded rulebook holds only the long-standing Annex III list, plus an advisory rule (`eu_allergens_2026`) telling EU exporters the expanded list isn't checked automatically yet. The expanded list must be transcribed from the official text on EUR-Lex (https://eur-lex.europa.eu/eli/reg/2023/1545/oj), not typed from memory. Load it into a **draft** version, one row per entry:
+Since version 2026.2, the substance lists come straight from the official texts, not from hand entry:
 
-```sql
-insert into substances
-  (rulebook_version_id, list_type, inci_name, synonyms, cas_number, markets,
-   leave_on_threshold_pct, rinse_off_threshold_pct, applies_from, sources)
-values
-  ((select id from rulebook_versions where scope = 'cosmetics' and version = '2026.2'),
-   'fragrance_allergen',
-   '<INCI name as printed in the Annex>',
-   array['<other names on labels>'],
-   '<CAS number>',
-   array['EU', 'NI'],
-   0.001, 0.01,
-   '2026-07-31',
-   jsonb_build_array(jsonb_build_object(
-     'market', 'EU',
-     'title', 'Commission Regulation (EU) 2023/1545',
-     'url', 'https://eur-lex.europa.eu/eli/reg/2023/1545/oj',
-     'clause', 'Annex, entry <n>')));
+| Jurisdiction | Source | What's loaded |
+| --- | --- | --- |
+| GB | legislation.gov.uk: Annexes II–VI of Regulation (EC) No 1223/2009 as it applies in Great Britain | 1,734 prohibited, 298 restricted, 25 fragrance allergens, 154 colourants, 54 preservatives, 33 UV filters |
+| EU and NI | The EU Publications Office's consolidated text (currently version 02009R1223-20260518, which includes Regulation (EU) 2023/1545) | 1,737 prohibited, 291 restricted, 81 fragrance allergens, 154 colourants, 55 preservatives, 33 UV filters |
+
+The annexes name substances chemically, while labels use INCI names. The link between the two comes from the Commission's CosIng database, which ties INCI names to annex entries (e.g. BUTYLPHENYL METHYLPROPIONAL → Annex II, entry 1666).
+
+How matches are reported:
+
+- **Prohibited (Annex II):** an official or CosIng name is a fail. It's a "check this" instead when the entry has an exception (e.g. petrolatum, "except if the full refining history is known…") or when the match is a derived name (e.g. "Arsenic" from "Arsenic and its compounds").
+- **Restricted, preservatives, UV filters (Annexes III, V, VI):** the finding lists the product-type limits, maximum concentrations and any warnings that must be printed on the label. Concentrations aren't on labels, so these are always "check this".
+- **Colourants (Annex IV):** a CI number that isn't on the permitted list is a fail. Colourants restricted by product type are "check this".
+- **Fragrance allergens:** for the EU and NI, the 2023/1545 list has applied to products placed on the market from 1 August 2026. Products already on the market may be sold until 31 July 2028. GB hasn't adopted it.
+
+### Refreshing the data
+
+```sh
+pip install beautifulsoup4
+scripts/rulebook/fetch_sources.sh /tmp/rulebook-src                       # official texts + SHA-256 manifest
+python3 scripts/rulebook/parse_annexes.py eu /tmp/rulebook-src/eu_consolidated.html supabase/rulebook-data/eu
+python3 scripts/rulebook/parse_annexes.py gb /tmp/rulebook-src/gb supabase/rulebook-data/gb
+cp /tmp/rulebook-src/sources.json supabase/rulebook-data/
+python3 scripts/rulebook/fetch_cosing.py supabase/rulebook-data/cosing_links.json
+python3 scripts/rulebook/build_migration.py 2026.3 2026.2 supabase/migrations/<timestamp>_rulebook_2026_3_official_annexes.sql
 ```
 
-Once all entries are loaded and signed off, reject `eu_allergens_2026` in that draft (the `fragrance_allergens` check then covers the new names) and publish. Great Britain hasn't adopted the expanded list, so keep `markets` to `EU` and `NI` unless that changes.
+The parser stops if any entry is dropped for a reason other than "deleted in the source". Review the diff of `supabase/rulebook-data/` (it shows exactly which entries changed), then commit. The new version is a draft until an admin signs it off and publishes it.
 
 ## Source monitoring
 
