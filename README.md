@@ -81,6 +81,15 @@ Set these as Supabase edge function secrets (`supabase secrets set NAME=value`):
 
 Every AI call is recorded in `ai_usage` with its tokens and the cost OpenRouter reports; **/admin/leads → Costs** shows cost per scan, how often scans were re-read, and daily totals.
 
+### Brand accounts
+
+Anyone can create an account at **/account** (email and password), create a brand (up to 5 per person) and save labels from the label builder to it. Each save of a label is a new version that records what changed; **Workspace → Labels** lists a brand's labels with their history, and "Use as template" starts a new product's label from an existing one (product details cleared; brand, responsible persons, markets and pack kept). Members see only their own brands; admins see every brand.
+
+In Supabase **Authentication**:
+
+- **Sign In / Providers → Email**: sign-ups enabled, and **Confirm email** on, so an account needs a working inbox.
+- **URL Configuration**: Site URL `https://www.labelring.co.uk`, and add `https://www.labelring.co.uk/account` to the redirect URLs (confirmation and password-reset links return there).
+
 ### GitHub Pages settings
 
 In the repo's **Settings → Pages**, set the source to "GitHub Actions". The site is served from the custom domain `www.labelring.co.uk` at the root, so the Vite `base` in `vite.config.ts` is `/`. If you ever move back to the default project-page URL (`https://<user>.github.io/labelring/`) instead of a custom domain, `base` needs to become `/labelring/` again.

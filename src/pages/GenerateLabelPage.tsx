@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { Sparkles, Loader2, Download, QrCode, Share2, Copy, Printer } from "lucide-react";
 import QRCode from "qrcode";
 import jsPDF from "jspdf";
@@ -60,6 +60,9 @@ import { buildPrintPdf, loadFonts, type PrintSpec } from "@/lib/print-label";
 import { CATEGORIES } from "@/lib/categories";
 import LeadCaptureDialog, { hasSubmittedLead, getSignupId } from "@/components/LeadCaptureDialog";
 import { useSeo } from "@/hooks/use-seo";
+import { useSession } from "@/hooks/use-session";
+import { fetchLabel, normaliseLabelData, templateFrom, type LabelData } from "@/lib/brand-labels";
+import SaveToBrand, { type EditingLabel } from "@/components/generator/SaveToBrand";
 
 const NUTRITION_ROWS: { key: keyof NutritionTable; label: string; placeholder: string }[] = [
   { key: "energyKj", label: "Energy (kJ)", placeholder: "1234" },
@@ -114,9 +117,71 @@ const GenerateLabelPage = () => {
   const [saving, setSaving] = useState(false);
   const [leadOpen, setLeadOpen] = useState(false);
   const pendingActionRef = useRef<null | (() => void)>(null);
+  const { session } = useSession();
+
+  // A saved brand label opened for editing (?label=) or as the start of a
+  // new product's label (?template=).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const labelParam = searchParams.get("label");
+  const templateParam = searchParams.get("template");
+  const [editing, setEditing] = useState<EditingLabel | null>(null);
+  const [templateOf, setTemplateOf] = useState<{ labelId: string; brandId: string; productName: string } | null>(null);
+  const loadedParamRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const id = labelParam ?? templateParam;
+    if (!id) {
+      // Left a saved label (e.g. "New label"): start a blank one.
+      if (loadedParamRef.current) {
+        loadedParamRef.current = null;
+        setEditing(null);
+        setTemplateOf(null);
+        setFields(emptyLabel);
+        setMarkets(["GB"]);
+        setPackFormat(null);
+        setCountries([]);
+      }
+      return;
+    }
+    if (!session) return;
+    const key = `${labelParam ? "label" : "template"}:${id}`;
+    if (loadedParamRef.current === key) return;
+    loadedParamRef.current = key;
+    (async () => {
+      try {
+        const found = await fetchLabel(id);
+        if (!found) {
+          toast.error("That label wasn't found, or it belongs to another brand.");
+          return;
+        }
+        const saved = normaliseLabelData(found.latest.data);
+        const data = labelParam ? saved : templateFrom(saved);
+        setScanHandoff(null);
+        setFields(data.fields);
+        setMarkets(data.markets as Market[]);
+        setPackFormat(data.pack as PackFormat | null);
+        setCountries(data.countries);
+        if (labelParam) {
+          setEditing({
+            labelId: found.label.id,
+            brandId: found.label.brand_id,
+            version: found.label.current_version,
+            productName: found.label.product_name,
+          });
+          setTemplateOf(null);
+        } else {
+          setEditing(null);
+          setTemplateOf({ labelId: found.label.id, brandId: found.label.brand_id, productName: found.label.product_name });
+        }
+      } catch (e) {
+        toast.error((e as Error).message ?? "Couldn't open the label.");
+      }
+    })();
+  }, [labelParam, templateParam, session]);
 
   const requireLead = (action: () => void) => {
-    if (hasSubmittedLead()) {
+    // Signed-in brand accounts have already told us who they are.
+    if (session || hasSubmittedLead()) {
       action();
       return;
     }
@@ -493,6 +558,27 @@ const GenerateLabelPage = () => {
           <span className={`text-2xl font-bold ${scoreColor}`}>{score}%</span>
         </div>
       </div>
+
+      {(editing || templateOf) && (
+        <div className="mb-4 rounded-lg border bg-accent/40 px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2">
+          <span>
+            {editing ? (
+              <>
+                Editing <strong>{editing.productName || "Untitled label"}</strong> · version {editing.version}. Saving
+                creates version {editing.version + 1}.
+              </>
+            ) : (
+              <>
+                New label from <strong>{templateOf!.productName || "Untitled label"}</strong>. Product details are cleared;
+                brand, responsible persons, markets and pack are kept.
+              </>
+            )}
+          </span>
+          <Link to="/workspace/labels" className="text-xs underline">
+            Label library
+          </Link>
+        </div>
+      )}
 
       {scanHandoff && (
         <>
@@ -1094,6 +1180,23 @@ const GenerateLabelPage = () => {
               <span className="text-[11px] leading-tight">Share</span>
             </Button>
           </div>
+          <SaveToBrand
+            session={session}
+            editing={editing}
+            templateOf={templateOf}
+            disabled={!hasAnyData}
+            getData={(): LabelData => ({ fields, markets, pack: packFormat, countries })}
+            score={score}
+            rulebookVersion={
+              rulebookFindings && draftCheck?.rulebook ? `${draftCheck.rulebook.scope} ${draftCheck.rulebook.version}` : null
+            }
+            onSaved={(saved) => {
+              setEditing(saved);
+              setTemplateOf(null);
+              loadedParamRef.current = `label:${saved.labelId}`;
+              setSearchParams({ label: saved.labelId }, { replace: true });
+            }}
+          />
           <Button className="w-full gap-2" onClick={() => requireLead(() => setPrintOpen(true))}>
             <Printer className="h-4 w-4" />
             Print-ready PDF
