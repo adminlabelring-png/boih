@@ -76,6 +76,10 @@ Set these as Supabase edge function secrets (`supabase secrets set NAME=value`):
 | `SCAN_DAILY_LIMIT` | `3` | Free label scans per person per day, counted by IP and by lead email. `0` turns the limit off. |
 | `GENERATE_DAILY_LIMIT` | `200` | AI wording suggestions/previews per person per day in the label generator. |
 | `QUOTA_EXEMPT_EMAILS` | _(none)_ | Comma-separated emails that are never limited while signed in (e.g. the team, for testing). |
+| `PRIMARY_MODEL` | `~google/gemini-flash-latest` | OpenRouter model that reads every scan. |
+| `FALLBACK_MODEL` | `anthropic/claude-sonnet-5.5` | OpenRouter model that re-reads a scan when the first read of a key field (ingredients, warnings, Responsible Person, batch, date, net quantity) is low-confidence; the more certain read of each field is kept. `off` turns re-reads off. |
+
+Every AI call is recorded in `ai_usage` with its tokens and the cost OpenRouter reports; **/admin/leads → Costs** shows cost per scan, how often scans were re-read, and daily totals.
 
 ### GitHub Pages settings
 

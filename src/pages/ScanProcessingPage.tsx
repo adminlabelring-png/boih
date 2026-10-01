@@ -197,6 +197,8 @@ const ScanProcessingPage = () => {
             rulebook_version: result.rulebook ? `${result.rulebook.scope} ${result.rulebook.version}` : null,
             rule_findings: result.findings.length ? (result.findings as any) : null,
             pack_format: options.pack,
+            // Links the scan to its AI calls and their cost (ai_usage).
+            ai_request_id: typeof data?.aiRequestId === "string" ? data.aiRequestId : null,
             eu_countries: options.markets.includes("EU") && options.countries.length ? options.countries : null,
           };
           // Visitors can save a scan but not read scans back, so the id is
@@ -207,7 +209,7 @@ const ScanProcessingPage = () => {
             .insert({ id: scanId, ...scanRow, ...rulebookColumns });
           // The frontend and the database migration deploy separately; if
           // the rulebook columns don't exist yet, still save the scan.
-          if (insertErr && /rulebook_version|rule_findings|pack_format|eu_countries/.test(insertErr.message)) {
+          if (insertErr && /rulebook_version|rule_findings|pack_format|eu_countries|ai_request_id/.test(insertErr.message)) {
             ({ error: insertErr } = await supabase.from("scans" as any).insert({ id: scanId, ...scanRow }));
           }
           if (insertErr) console.warn("scan save failed", insertErr);

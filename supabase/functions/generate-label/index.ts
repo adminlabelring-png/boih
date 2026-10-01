@@ -5,6 +5,7 @@
 // Packs: "food" (UK FIC), "cosmetic" (INCI/CPNP), "generic".
 
 import { consumeQuota, dailyLimit, releaseQuota } from "../_shared/quota.ts";
+import { geminiUsage, openRouterUsage, recordUsage, type AIResult } from "../_shared/ai-usage.ts";
 
 // Generous: the preview regenerates as people type. This only stops abuse.
 const GENERATE_LIMIT = dailyLimit("GENERATE_DAILY_LIMIT", 200);
@@ -205,7 +206,7 @@ function pickPreviewSystem(pack: Pack): string {
   return GENERIC_PREVIEW_SYSTEM;
 }
 
-async function callOpenRouter(system: string, user: string) {
+async function callOpenRouter(system: string, user: string): Promise<AIResult> {
   const key = Deno.env.get("OPENROUTER_API_KEY");
   if (!key) throw new Error("OPENROUTER_API_KEY not configured");
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -218,6 +219,8 @@ async function callOpenRouter(system: string, user: string) {
     },
     body: JSON.stringify({
       model: MODEL,
+      // Ask OpenRouter to report what the call cost.
+      usage: { include: true },
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -232,10 +235,10 @@ async function callOpenRouter(system: string, user: string) {
     throw new Error(`OpenRouter request failed (${res.status}): ${t.slice(0, 300)}`);
   }
   const json = await res.json();
-  return (json.choices?.[0]?.message?.content ?? "").trim();
+  return { content: (json.choices?.[0]?.message?.content ?? "").trim(), usage: openRouterUsage(json, MODEL) };
 }
 
-async function callGemini(system: string, user: string) {
+async function callGemini(system: string, user: string): Promise<AIResult> {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) throw new Error("GEMINI_API_KEY not configured");
   const model = Deno.env.get("GEMINI_MODEL") || "gemini-flash-latest";
@@ -258,13 +261,37 @@ async function callGemini(system: string, user: string) {
     throw new Error(`Gemini request failed (${res.status}): ${t.slice(0, 300)}`);
   }
   const json = await res.json();
-  return (json.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+  return { content: (json.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim(), usage: geminiUsage(json, model) };
 }
 
-async function callAI(system: string, user: string) {
+// One suggestion or preview; the call and its cost are recorded.
+async function callAI(system: string, user: string): Promise<string> {
   const provider = (Deno.env.get("AI_PROVIDER") || "openrouter").toLowerCase();
-  if (provider === "gemini") return callGemini(system, user);
-  return callOpenRouter(system, user);
+  const requestId = crypto.randomUUID();
+  const started = Date.now();
+  try {
+    const result = provider === "gemini" ? await callGemini(system, user) : await callOpenRouter(system, user);
+    await recordUsage({
+      functionName: "generate-label",
+      requestId,
+      attempt: "primary",
+      usage: result.usage,
+      latencyMs: Date.now() - started,
+    });
+    return result.content;
+  } catch (e) {
+    await recordUsage({
+      functionName: "generate-label",
+      requestId,
+      attempt: "primary",
+      usage: null,
+      provider,
+      model: MODEL,
+      error: e instanceof Error ? e.message : String(e),
+      latencyMs: Date.now() - started,
+    });
+    throw e;
+  }
 }
 
 Deno.serve(async (req) => {
