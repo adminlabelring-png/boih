@@ -24,7 +24,7 @@ const SettingsPage = () => {
         ))}
       </div>
 
-      <p className="text-xs text-muted-foreground">Editing brand settings is disabled in demo mode.</p>
+      <p className="text-xs text-muted-foreground">Brand settings become editable with brand accounts.</p>
     </div>
   );
 };

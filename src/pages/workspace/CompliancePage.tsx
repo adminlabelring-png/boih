@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Clock, Bell, Info } from "lucide-react";
 import { useBrand } from "@/lib/brand-context";
-import { fetchProducts, fetchSuppliers, ProductRow, SupplierRow } from "@/lib/workspace-queries";
+import { daysAgo, fetchProducts, fetchSuppliers } from "@/lib/workspace-queries";
 
 interface Item { severity: "danger" | "warn" | "info"; title: string; sub: string; time: string; }
 
@@ -24,24 +24,20 @@ const CompliancePage = () => {
     Promise.all([fetchProducts(brand.id), fetchSuppliers(brand.id)]).then(([products, suppliers]) => {
       const list: Item[] = [];
       suppliers.filter(s => s.verification_status === "flagged").forEach(s => {
-        list.push({ severity: "danger", title: brand.vertical === "jewelry" ? "REACH nickel limit breach risk" : `Supplier ${s.name} flagged`,
-          sub: s.notes ?? "Verification score below threshold.", time: "2 days ago" });
+        list.push({ severity: "danger", title: `Supplier ${s.name} flagged`,
+          sub: s.notes ?? "Verification score below threshold.", time: daysAgo(s.last_activity_at) });
       });
       products.filter(p => p.label_status === "flagged").forEach(p => {
         list.push({ severity: "danger", title: `${p.name} label flagged`,
-          sub: `SKU ${p.sku} — pulled from sale until artwork is corrected.`, time: "Today" });
+          sub: `SKU ${p.sku} — the label needs correcting.`, time: daysAgo(p.updated_at) });
       });
       products.filter(p => p.is_seasonal && p.label_status !== "approved").forEach(p => {
         list.push({ severity: "warn", title: "Seasonal SKU label expiry",
-          sub: `${p.name} — ${p.season_tag ?? "seasonal"} label not yet approved.`, time: "1 day ago" });
+          sub: `${p.name} — ${p.season_tag ?? "seasonal"} label not yet approved.`, time: daysAgo(p.updated_at) });
       });
       products.filter(p => p.label_status === "in_review").forEach(p => {
-        list.push({ severity: "info", title: `${p.name} awaiting review`, sub: `Version ${p.label_version} pending sign-off.`, time: "Today" });
+        list.push({ severity: "info", title: `${p.name} awaiting review`, sub: `Version ${p.label_version} pending sign-off.`, time: daysAgo(p.updated_at) });
       });
-      if (brand.vertical === "jewelry") {
-        list.push({ severity: "info", title: "Hallmarking declaration missing",
-          sub: "SKUs above 1g sterling silver threshold require UK hallmark declaration.", time: "Today" });
-      }
       setItems(list);
     });
   }, [brand]);

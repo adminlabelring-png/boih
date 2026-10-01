@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Plus, Tag, CheckCircle2, AlertTriangle, Clock, Bell, Factory, QrCode, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBrand } from "@/lib/brand-context";
-import { fetchProducts, fetchSuppliers, ProductRow, SupplierRow } from "@/lib/workspace-queries";
+import { daysAgo, fetchProducts, fetchSuppliers, ProductRow, SupplierRow } from "@/lib/workspace-queries";
 import StatusPill from "@/components/workspace/StatusPill";
 
 interface Alert {
@@ -13,35 +13,25 @@ interface Alert {
   time: string;
 }
 
-const buildAlerts = (products: ProductRow[], suppliers: SupplierRow[], vertical: string): Alert[] => {
+const buildAlerts = (products: ProductRow[], suppliers: SupplierRow[]): Alert[] => {
   const alerts: Alert[] = [];
   const flaggedSupplier = suppliers.find(s => s.verification_status === "flagged");
-  if (flaggedSupplier && vertical === "jewelry") {
-    alerts.push({ severity: "danger", title: "REACH nickel limit breach risk",
-      sub: `${flaggedSupplier.name} — alloy spec changed. Nickel content above 500 ppm threshold.`,
-      time: "Flagged 2 days ago" });
-  } else if (flaggedSupplier) {
+  if (flaggedSupplier) {
     alerts.push({ severity: "danger", title: "Supplier verification flagged",
       sub: `${flaggedSupplier.name} — ${flaggedSupplier.notes ?? "verification dropped below threshold"}.`,
-      time: "Flagged 2 days ago" });
+      time: daysAgo(flaggedSupplier.last_activity_at) });
   }
   const seasonal = products.find(p => p.is_seasonal && p.label_status !== "approved");
   if (seasonal) {
     const days = seasonal.launch_date ? Math.max(0, Math.round((+new Date(seasonal.launch_date) - Date.now()) / 86400000)) : null;
     alerts.push({ severity: "warn", title: "Seasonal SKU label expiry",
       sub: `${seasonal.name} — ${seasonal.season_tag ?? "seasonal"} label not yet approved${days != null ? `. Launch in ${days} days` : ""}.`,
-      time: "Added 1 day ago" });
+      time: daysAgo(seasonal.updated_at) });
   }
-  if (vertical === "jewelry") {
-    alerts.push({ severity: "info", title: "Hallmarking declaration missing",
-      sub: "3 SKUs above 1g sterling silver threshold require UK hallmark declaration.",
-      time: "Added today" });
-  } else {
-    const inReview = products.filter(p => p.label_status === "in_review").length;
-    if (inReview > 0) alerts.push({ severity: "info", title: "Labels awaiting review",
-      sub: `${inReview} label${inReview > 1 ? "s" : ""} pending compliance sign-off.`,
-      time: "Updated today" });
-  }
+  const inReview = products.filter(p => p.label_status === "in_review");
+  if (inReview.length > 0) alerts.push({ severity: "info", title: "Labels awaiting review",
+    sub: `${inReview.length} label${inReview.length > 1 ? "s" : ""} pending compliance sign-off.`,
+    time: daysAgo(inReview[0].updated_at) });
   return alerts;
 };
 
@@ -72,11 +62,16 @@ const DashboardPage = () => {
 
   if (loading || !brand) return <div className="text-sm text-muted-foreground">Loading workspace…</div>;
 
+  const monthAgo = Date.now() - 30 * 86400000;
+  const updatedThisMonth = products.filter(p => +new Date(p.updated_at) >= monthAgo).length;
+  const lastUpdated = products[0]?.updated_at;
+  const missingMaterialData = products.filter(p => Object.keys(p.material_data ?? {}).length === 0).length;
+
   const total = products.length;
   const approved = products.filter(p => p.label_status === "approved").length;
   const flagged = products.filter(p => p.label_status === "flagged").length;
   const inReview = products.filter(p => p.label_status === "in_review").length;
-  const alerts = buildAlerts(products, suppliers, brand.vertical);
+  const alerts = buildAlerts(products, suppliers);
 
   return (
     <div className="space-y-5">
@@ -84,20 +79,22 @@ const DashboardPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{brand.name} — {total} active SKUs · Last updated today</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {brand.name} — {total} active SKUs{lastUpdated ? ` · Last updated ${daysAgo(lastUpdated).toLowerCase()}` : ""}
+          </p>
         </div>
-        <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> New label</Button>
+        <Button asChild size="sm" className="gap-1.5"><Link to="/generate"><Plus className="h-4 w-4" /> New label</Link></Button>
       </div>
 
       {/* DPP banner — jewelry only */}
-      {brand.vertical === "jewelry" && (
+      {brand.vertical === "jewelry" && missingMaterialData > 0 && (
         <div className="rounded-lg border bg-accent/40 p-4 flex items-center gap-3">
           <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0">
             <QrCode className="h-4 w-4" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium">Digital Product Passport readiness</p>
-            <p className="text-xs text-muted-foreground mt-0.5">EU DPP regulation takes effect Q1 2027 — 4 SKUs need material data completing</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{missingMaterialData} SKU{missingMaterialData === 1 ? "" : "s"} need material data completing</p>
           </div>
           <Button asChild size="sm" variant="default"><Link to="/workspace/dpp">Review readiness</Link></Button>
         </div>
@@ -106,7 +103,7 @@ const DashboardPage = () => {
       {/* Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Total labels", icon: Tag,            value: total,    sub: "+3 this month",    tone: "ok" },
+          { label: "Total labels", icon: Tag,            value: total,    sub: `${updatedThisMonth} updated this month`, tone: "ok" },
           { label: "Approved",     icon: CheckCircle2,   value: approved, sub: total ? `${Math.round((approved/total)*100)}% of labels` : "—", tone: "ok" },
           { label: "Flagged",      icon: AlertTriangle,  value: flagged,  sub: "Needs action",     tone: flagged ? "danger" : "ok" },
           { label: "In review",    icon: Clock,          value: inReview, sub: "Awaiting approval", tone: "warn" },

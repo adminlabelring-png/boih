@@ -1,5 +1,4 @@
 import { Linkedin, Instagram } from "lucide-react";
-import { Link } from "react-router-dom";
 
 
 const LandingFooter = () => (
@@ -29,12 +28,6 @@ const LandingFooter = () => (
             <Instagram className="h-4 w-4" />
           </a>
         </div>
-        <Link
-          to="/workspace"
-          className="text-[10px] text-muted-foreground/70 hover:text-muted-foreground tracking-wide"
-        >
-          Workspace
-        </Link>
       </div>
 
     </div>
