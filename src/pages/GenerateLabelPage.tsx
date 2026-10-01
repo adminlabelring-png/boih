@@ -40,7 +40,9 @@ import {
   EU_FRAGRANCE_ALLERGENS,
   FRAGRANCE_ALLERGEN_THRESHOLD,
 } from "@/lib/allergens";
-import { checkDraft, generatePreview, suggestField, type DraftCheck } from "@/lib/generate-label";
+import { checkDraft, generatePreview, suggestField, translateLabelText, type DraftCheck } from "@/lib/generate-label";
+import { TRANSLATABLE, usesVariants, variantFields, variantsFor, type Variant, type VariantText } from "@/lib/label-variants";
+import MarketVersions from "@/components/generator/MarketVersions";
 import RuleFindings from "@/components/RuleFindings";
 import { rulebookStampText, findingStatusLabel } from "@/lib/rule-findings";
 import type { Market, PackFormat } from "@/lib/scan-context";
@@ -104,6 +106,10 @@ const GenerateLabelPage = () => {
   // EU countries (language rules), when the EU is one of the markets.
   const [countries, setCountries] = useState<string[]>(() => scanHandoff?.rulebook?.countries ?? []);
   const euCountries = markets.includes("EU") ? countries : [];
+  // Market versions (GB, NI, EU per country): their own wording per language.
+  const [variantText, setVariantText] = useState<Record<string, VariantText>>({});
+  const [variantChecks, setVariantChecks] = useState<Record<string, DraftCheck | null>>({});
+  const [translating, setTranslating] = useState<string | null>(null);
   const [draftCheck, setDraftCheck] = useState<DraftCheck | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -141,6 +147,7 @@ const GenerateLabelPage = () => {
         setMarkets(["GB"]);
         setPackFormat(null);
         setCountries([]);
+        setVariantText({});
       }
       return;
     }
@@ -162,6 +169,7 @@ const GenerateLabelPage = () => {
         setMarkets(data.markets as Market[]);
         setPackFormat(data.pack as PackFormat | null);
         setCountries(data.countries);
+        setVariantText(data.variants ?? {});
         if (labelParam) {
           setEditing({
             labelId: found.label.id,
@@ -231,6 +239,12 @@ const GenerateLabelPage = () => {
     return base;
   }, [pack]);
 
+  const variants = useMemo(() => (pack === "cosmetic" ? variantsFor(markets, euCountries) : []), [pack, markets, euCountries]);
+  const showVersions = usesVariants(variants);
+  // With market versions, language rules are checked on each version (in
+  // its own language), not on the English master.
+  const masterCountries = showVersions && variants.some((v) => v.language !== "en") ? [] : euCountries;
+
   // Debounced rulebook check for cosmetics (no AI, cheap): re-run as the
   // draft or the chosen markets change.
   useEffect(() => {
@@ -240,7 +254,7 @@ const GenerateLabelPage = () => {
     }
     let cancelled = false;
     const t = setTimeout(() => {
-      checkDraft(fields, markets, packFormat, euCountries)
+      checkDraft(fields, markets, packFormat, masterCountries)
         .then((r) => !cancelled && setDraftCheck(r))
         .catch((e) => console.warn("rulebook check failed", e));
     }, 800);
@@ -249,7 +263,50 @@ const GenerateLabelPage = () => {
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(fields), pack, markets.join(","), packFormat, euCountries.join(",")]);
+  }, [JSON.stringify(fields), pack, markets.join(","), packFormat, masterCountries.join(",")]);
+
+  // Each market version checked against its own market (and country).
+  useEffect(() => {
+    if (!showVersions) {
+      setVariantChecks({});
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      Promise.all(
+        variants.map((v) =>
+          checkDraft(variantFields(fields, v, variantText[v.id]), [v.market], packFormat, v.country ? [v.country] : [])
+            .then((r) => [v.id, r] as const)
+            .catch(() => [v.id, null] as const)
+        )
+      ).then((rows) => !cancelled && setVariantChecks(Object.fromEntries(rows)));
+    }, 1200);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(fields), JSON.stringify(variantText), variants.map((v) => v.id).join(","), packFormat, showVersions]);
+
+  const translateVariant = async (v: Variant) => {
+    if (v.language === "en") return;
+    const texts: Record<string, string> = {};
+    for (const k of TRANSLATABLE) if (fields[k]?.trim()) texts[k] = fields[k];
+    if (!Object.keys(texts).length) {
+      toast.error("Fill in the English wording first.");
+      return;
+    }
+    setTranslating(v.id);
+    try {
+      const out = await translateLabelText(texts, v.language);
+      setVariantText((prev) => ({ ...prev, [v.id]: { ...prev[v.id], ...out, machineTranslated: true } }));
+      toast.success("Translated. Have a native speaker check it before printing.");
+    } catch (e) {
+      toast.error((e as Error).message || "Couldn't translate. Try again.");
+    } finally {
+      setTranslating(null);
+    }
+  };
 
   // Debounced preview generation — skips while a Suggest is in flight to avoid rate limits
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -491,18 +548,23 @@ const GenerateLabelPage = () => {
     doc.save(`${filename}-label.pdf`);
   };
 
-  const handlePrintExport = async (spec: PrintSpec, extras: PrintExtras) => {
+  const handlePrintExport = async (spec: PrintSpec, extras: PrintExtras, versionId?: string) => {
+    const version = versionId ? variants.find((v) => v.id === versionId) : undefined;
+    const printFields = version ? variantFields(fields, version, variantText[version.id]) : fields;
+    const versionCheck = version ? variantChecks[version.id] : null;
     saveLabel().catch((e) => console.warn("label persist failed", e));
     const fonts = await loadFonts();
     const { doc, layout, warnings } = buildPrintPdf({
-      fields,
+      fields: printFields,
       pack,
       warnings: derivedWarnings,
       spec,
       fonts,
-      markets: pack === "cosmetic" ? markets : undefined,
-      findings: rulebookFindings,
-      rulebook: draftCheck?.rulebook ?? null,
+      markets: pack === "cosmetic" ? (version ? [version.market] : markets) : undefined,
+      findings: version ? versionCheck?.findings ?? null : rulebookFindings,
+      rulebook: version ? versionCheck?.rulebook ?? null : draftCheck?.rulebook ?? null,
+      language: version?.language,
+      versionLabel: version?.label,
       builtInChecks: rulebookFindings ? undefined : rules.map((r) => ({ label: r.label, status: r.status })),
       extras,
     });
@@ -512,7 +574,7 @@ const GenerateLabelPage = () => {
     const url = URL.createObjectURL(new Blob([pdfBytes(pdf)], { type: "application/pdf" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${filename}-print-${spec.widthMm}x${spec.heightMm}mm.pdf`;
+    a.download = `${filename}${version ? `-${version.id.toLowerCase()}` : ""}-print-${spec.widthMm}x${spec.heightMm}mm.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1050,7 +1112,7 @@ const GenerateLabelPage = () => {
                     })}
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    One master label is checked against every market you pick.
+                    The master label holds the product facts; each market gets its own version below.
                   </p>
                 </div>
               )}
@@ -1144,6 +1206,18 @@ const GenerateLabelPage = () => {
               )}
             </div>
           </section>
+
+          {showVersions && (
+            <MarketVersions
+              master={fields}
+              variants={variants}
+              text={variantText}
+              onChange={(id, t) => setVariantText((prev) => ({ ...prev, [id]: t }))}
+              checks={variantChecks}
+              translating={translating}
+              onTranslate={translateVariant}
+            />
+          )}
         </div>
 
         {/* RIGHT: preview + compliance + actions */}
@@ -1202,7 +1276,13 @@ const GenerateLabelPage = () => {
             editing={editing}
             templateOf={templateOf}
             disabled={!hasAnyData}
-            getData={(): LabelData => ({ fields, markets, pack: packFormat, countries })}
+            getData={(): LabelData => ({
+              fields,
+              markets,
+              pack: packFormat,
+              countries,
+              ...(Object.keys(variantText).length ? { variants: variantText } : {}),
+            })}
             score={score}
             rulebookVersion={
               rulebookFindings && draftCheck?.rulebook ? `${draftCheck.rulebook.scope} ${draftCheck.rulebook.version}` : null
@@ -1223,6 +1303,7 @@ const GenerateLabelPage = () => {
             onOpenChange={setPrintOpen}
             onExport={handlePrintExport}
             showSymbols={pack === "cosmetic"}
+            versions={showVersions ? variants.map((v) => ({ id: v.id, label: v.label })) : []}
             defaultLeafletSymbol={pack === "cosmetic" && packFormat === "leaflet"}
           />
 

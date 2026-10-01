@@ -203,3 +203,17 @@ describe("print extras and PDF/X-1a", () => {
     expect(Array.from(cmyk.slice(8, 12))).toEqual([0, 0, 0, 255]); // black -> K only
   });
 });
+
+describe("market version wording", () => {
+  it("prints the fixed label wording in the version's language", () => {
+    const f = { ...cosmetic, dateType: "best_before" as const, bestBefore: "06/2028" };
+    const words = (lang: "en" | "de" | "fr") =>
+      labelBlocks(f, "cosmetic", [], { language: lang, leafletSymbol: true })
+        .flatMap((b) => (b.kind === "text" ? b.runs.map((r) => r.text) : []))
+        .join(" ");
+    expect(words("de")).toMatch(/Mindestens haltbar bis Ende: .*Charge: .*Hergestellt in United Kingdom/s);
+    expect(words("de")).toMatch(/Siehe beiliegende Informationen/);
+    expect(words("fr")).toMatch(/À utiliser de préférence avant fin: .*Lot: .*Fabriqué en United Kingdom/s);
+    expect(words("en")).toMatch(/Best before end: .*Batch: .*Made in United Kingdom/s);
+  });
+});

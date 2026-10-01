@@ -58,13 +58,20 @@ const PrintDialog = ({
   onExport,
   defaultLeafletSymbol = false,
   showSymbols = true,
+  versions = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onExport: (spec: PrintSpec, extras: PrintExtras) => Promise<PrintOutcome>;
+  onExport: (spec: PrintSpec, extras: PrintExtras, versionId?: string) => Promise<PrintOutcome>;
   defaultLeafletSymbol?: boolean;
   showSymbols?: boolean;
+  // Market versions to choose from; empty prints the master label.
+  versions?: { id: string; label: string }[];
 }) => {
+  const [versionId, setVersionId] = useState<string>("");
+  useEffect(() => {
+    if (!versions.some((v) => v.id === versionId)) setVersionId(versions[0]?.id ?? "");
+  }, [versions, versionId]);
   const [spec, setSpec] = useState<PrintSpec>(DEFAULT_PRINT_SPEC);
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<PrintOutcome | null>(null);
@@ -124,6 +131,19 @@ const PrintDialog = ({
             compliance summary sheet.
           </DialogDescription>
         </DialogHeader>
+
+        {versions.length > 0 && (
+          <div className="space-y-1.5">
+            <Label htmlFor="print-version" className="text-xs">Market version</Label>
+            <Select value={versionId} onValueChange={(v) => { setVersionId(v); setOutcome(null); }}>
+              <SelectTrigger id="print-version"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {versions.map((v) => <SelectItem key={v.id} value={v.id}>{v.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">Each version prints with its own Responsible Person and language.</p>
+          </div>
+        )}
 
         <section className="space-y-2">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Size</h3>
@@ -278,7 +298,7 @@ const PrintDialog = ({
             onClick={async () => {
               setBusy(true);
               try {
-                setOutcome(await onExport(spec, extras()));
+                setOutcome(await onExport(spec, extras(), versionId || undefined));
               } finally {
                 setBusy(false);
               }

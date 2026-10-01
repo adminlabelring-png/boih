@@ -5,6 +5,7 @@ import type { Market, RuleFinding, RulebookStamp } from "./scan-context";
 import { describeMarkets, findingStatusLabel, rulebookStampText } from "./rule-findings";
 import { CHECK_DISCLAIMER } from "./disclaimer";
 import { BARCODE_GEOMETRY, barcodeSizeMm, fitMagnification, isGuardModule, type Barcode } from "./barcode";
+import { LABEL_WORDS, type Language } from "./label-variants";
 import { addCmykImage, applyPdfX1a, OUTPUT_CONDITIONS, type CmykImage, type OutputCondition } from "./pdfx";
 
 // Print-ready label artwork plus a compliance summary sheet, as PDF/X-1a.
@@ -116,8 +117,9 @@ export const labelBlocks = (
   f: LabelFields,
   pack: Pack,
   warnings: DerivedWarning[] = [],
-  opts: { leafletSymbol?: boolean } = {}
+  opts: { leafletSymbol?: boolean; language?: Language } = {}
 ): Block[] => {
+  const words = LABEL_WORDS[opts.language ?? "en"];
   const b: Block[] = [];
   if (has(f.brandName)) b.push({ kind: "text", runs: [{ text: f.brandName, bold: true, accent: true }] });
   if (has(f.productName)) b.push({ kind: "text", runs: [{ text: f.productName, bold: true, accent: true }], scale: 1.3 });
@@ -153,18 +155,18 @@ export const labelBlocks = (
   if (has(f.netQuantity)) b.push(text(f.netQuantity, true));
   // Hand-in-book (Reg. 1223/2009 Annex VII.1): information on an enclosed
   // leaflet, tag or card.
-  if (opts.leafletSymbol) b.push({ kind: "text", runs: [{ text: "See enclosed information." }], icon: "leaflet" });
-  if (has(f.ingredients)) b.push(labelled("Ingredients", f.ingredients));
+  if (opts.leafletSymbol) b.push({ kind: "text", runs: [{ text: words.seeEnclosed }], icon: "leaflet" });
+  if (has(f.ingredients)) b.push(labelled(words.ingredients, f.ingredients));
   if (has(f.instructionsForUse)) b.push(text(f.instructionsForUse));
   if (f.dateType === "pao" && has(f.paoMonths)) b.push({ kind: "pao", months: f.paoMonths.replace(/\D/g, "") });
   // Hourglass (Annex VII.3) before the date of minimum durability.
   else if (has(f.bestBefore))
-    b.push({ kind: "text", runs: [{ text: "Best before end: ", bold: true }, { text: f.bestBefore }], icon: "hourglass" });
+    b.push({ kind: "text", runs: [{ text: `${words.bestBeforeEnd}: `, bold: true }, { text: f.bestBefore }], icon: "hourglass" });
   if (has(f.storageInstructions)) b.push(text(f.storageInstructions));
-  if (has(f.batchNumber)) b.push(labelled("Batch", f.batchNumber));
+  if (has(f.batchNumber)) b.push(labelled(words.batch, f.batchNumber));
   if (has(f.responsiblePerson)) b.push(text(f.responsiblePerson));
   if (has(f.euResponsiblePerson)) b.push(text(f.euResponsiblePerson));
-  if (has(f.countryOfOrigin)) b.push(text(/^made in/i.test(f.countryOfOrigin) ? f.countryOfOrigin : `Made in ${f.countryOfOrigin}`));
+  if (has(f.countryOfOrigin)) b.push(text(words.madeIn(f.countryOfOrigin)));
   if (has(f.certifications)) b.push(text(f.certifications));
   return b;
 };
@@ -505,6 +507,9 @@ export interface PrintInput {
   rulebook?: RulebookStamp | null;
   builtInChecks?: { label: string; status: "ok" | "review" | "missing" }[];
   extras?: PrintExtras;
+  // Market version being printed, for its fixed wording and the summary.
+  language?: Language;
+  versionLabel?: string;
 }
 
 export interface PrintResult {
@@ -604,7 +609,10 @@ export const buildPrintPdf = (input: PrintInput): PrintResult => {
   }
 
   const minPt = xHeightToPt(minXHeightMm(input.pack, spec));
-  const blocks = labelBlocks(input.fields, input.pack, input.warnings, { leafletSymbol: extras.leafletSymbol });
+  const blocks = labelBlocks(input.fields, input.pack, input.warnings, {
+    leafletSymbol: extras.leafletSymbol,
+    language: input.language,
+  });
   const layout = fitLayout(doc, blocks, safeW, Math.max(0, textBottom - textTop), Math.round(minPt * 4) / 4);
   drawPlaced(doc, layout.placed, safeX, textTop, safeW, accent);
 
@@ -641,6 +649,7 @@ export const buildPrintPdf = (input: PrintInput): PrintResult => {
   line(`Product: ${input.fields.productName || "—"}${input.fields.brandName ? ` (${input.fields.brandName})` : ""}`);
   line(`Category: ${input.fields.category || "—"}`);
   if (input.markets?.length) line(`Markets: ${describeMarkets(input.markets)}`);
+  if (input.versionLabel) line(`Market version: ${input.versionLabel}`);
   line(`Generated: ${new Date().toLocaleString("en-GB")}`);
   y += 3;
 

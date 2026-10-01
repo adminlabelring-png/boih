@@ -93,3 +93,16 @@ export async function generatePreview(
   if (error) throw await toGenerateLabelError(error);
   return (data as { preview?: string })?.preview ?? "";
 }
+
+// Market versions: the label's English wording translated by AI for the
+// brand to review.
+export async function translateLabelText(
+  texts: Record<string, string>,
+  language: "de" | "fr"
+): Promise<Record<string, string>> {
+  const { data, error } = await supabase.functions.invoke("generate-label", {
+    body: { mode: "translate", texts, language, signupId: getSignupId() },
+  });
+  if (error) throw await toGenerateLabelError(error);
+  return ((data as { texts?: Record<string, string> })?.texts ?? {}) as Record<string, string>;
+}
