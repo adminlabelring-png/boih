@@ -13,6 +13,14 @@ import {
 import { consumeQuota, dailyLimit, releaseQuota } from "../_shared/quota.ts";
 import { loadRulebook } from "../_shared/rulebook.ts";
 import { extrasToFields, type ScanExtras } from "../_shared/label-mapping.ts";
+import { geminiUsage, openRouterUsage, recordUsage, type AIResult } from "../_shared/ai-usage.ts";
+import { fallbackReason, mergeReads, type ScanRead } from "../_shared/scan-fallback.ts";
+
+// The everyday reader, and the stronger model that re-reads a scan when
+// the first read of a key field is low-confidence (e.g. small, dense
+// ingredient lists). FALLBACK_MODEL=off turns the re-read off.
+const PRIMARY_MODEL = Deno.env.get("PRIMARY_MODEL") || "~google/gemini-flash-latest";
+const FALLBACK_MODEL = Deno.env.get("FALLBACK_MODEL") || "anthropic/claude-sonnet-5.5";
 
 // Free scans per person per day (by IP and by lead email). Set
 // SCAN_DAILY_LIMIT to change it; 0 turns the limit off.
@@ -110,7 +118,7 @@ interface ImageInput {
   base64: string;
 }
 
-async function callOpenRouter(system: string, userText: string, images: ImageInput[]) {
+async function callOpenRouter(system: string, userText: string, images: ImageInput[], model: string): Promise<AIResult> {
   const key = Deno.env.get("OPENROUTER_API_KEY");
   if (!key) throw new Error("OPENROUTER_API_KEY is not configured");
 
@@ -128,7 +136,9 @@ async function callOpenRouter(system: string, userText: string, images: ImageInp
       // catalog) — the un-prefixed slug started returning
       // "is not a valid model ID" once this stopped being the direct
       // (and only working) path.
-      model: "~google/gemini-flash-latest",
+      model,
+      // Ask OpenRouter to report what the call cost.
+      usage: { include: true },
       messages: [
         { role: "system", content: system },
         {
@@ -154,10 +164,10 @@ async function callOpenRouter(system: string, userText: string, images: ImageInp
   const json = await response.json();
   const content = json.choices?.[0]?.message?.content;
   if (!content) throw new Error("No content in OpenRouter response");
-  return content;
+  return { content, usage: openRouterUsage(json, model) };
 }
 
-async function callGemini(system: string, userText: string, images: ImageInput[]) {
+async function callGemini(system: string, userText: string, images: ImageInput[]): Promise<AIResult> {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) throw new Error("GEMINI_API_KEY is not configured");
 
@@ -191,13 +201,70 @@ async function callGemini(system: string, userText: string, images: ImageInput[]
   const json = await response.json();
   const content = json.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!content) throw new Error("No content in Gemini response");
-  return content;
+  return { content, usage: geminiUsage(json, model) };
 }
 
-async function callAI(system: string, userText: string, images: ImageInput[]) {
+async function callAI(system: string, userText: string, images: ImageInput[]): Promise<AIResult> {
   const provider = (Deno.env.get("AI_PROVIDER") || "openrouter").toLowerCase();
   if (provider === "gemini") return callGemini(system, userText, images);
-  return callOpenRouter(system, userText, images);
+  return callOpenRouter(system, userText, images, PRIMARY_MODEL);
+}
+
+const parseRead = (content: string): ScanRead => {
+  const cleaned = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // Some models put a sentence before or after the JSON.
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
+    throw e;
+  }
+};
+
+// Re-reads the scan with the stronger model when the first read hedged on
+// a key field, and keeps the more certain read of each field. Any failure
+// leaves the first read as it was. Every call is recorded with its cost.
+async function withFallback(
+  first: ScanRead,
+  system: string,
+  userText: string,
+  images: ImageInput[],
+  requestId: string
+): Promise<ScanRead> {
+  const reason = fallbackReason(first);
+  const enabled = FALLBACK_MODEL.toLowerCase() !== "off" && !!Deno.env.get("OPENROUTER_API_KEY");
+  if (!reason || !enabled) return first;
+
+  const started = Date.now();
+  try {
+    const result = await callOpenRouter(system, userText, images, FALLBACK_MODEL);
+    await recordUsage({
+      functionName: "analyze-label",
+      requestId,
+      attempt: "fallback",
+      usage: result.usage,
+      fallbackReason: reason,
+      latencyMs: Date.now() - started,
+    });
+    const { read, improved } = mergeReads(first, parseRead(result.content));
+    return { ...read, reader: { fallback: { model: result.usage.model, reason, improved } } };
+  } catch (e) {
+    console.error("fallback read failed:", e);
+    await recordUsage({
+      functionName: "analyze-label",
+      requestId,
+      attempt: "fallback",
+      usage: null,
+      provider: "openrouter",
+      model: FALLBACK_MODEL,
+      fallbackReason: reason,
+      error: e instanceof Error ? e.message : String(e),
+      latencyMs: Date.now() - started,
+    });
+    return first;
+  }
 }
 
 // Runs the deterministic rules over what the model read. Never fails the
@@ -314,10 +381,32 @@ serve(async (req) => {
         ? `Analyze these ${images.length} images together — they are different sides/faces of the same product's packaging, submitted as one scan. File names: ${fileNames}. Extract all fields and return JSON only.`
         : `Analyze this product label image. File name: ${fileNames}. Extract all fields and return JSON only.`;
 
+    const system = SYSTEM_PROMPT + seasonalAddendum;
+    // One id for this scan's AI calls; the frontend saves it with the scan.
+    const requestId = crypto.randomUUID();
+    const started = Date.now();
     let content: string;
     try {
-      content = await callAI(SYSTEM_PROMPT + seasonalAddendum, userText, images);
+      const result = await callAI(system, userText, images);
+      content = result.content;
+      await recordUsage({
+        functionName: "analyze-label",
+        requestId,
+        attempt: "primary",
+        usage: result.usage,
+        latencyMs: Date.now() - started,
+      });
     } catch (e) {
+      await recordUsage({
+        functionName: "analyze-label",
+        requestId,
+        attempt: "primary",
+        usage: null,
+        provider: (Deno.env.get("AI_PROVIDER") || "openrouter").toLowerCase(),
+        model: PRIMARY_MODEL,
+        error: e instanceof Error ? e.message : String(e),
+        latencyMs: Date.now() - started,
+      });
       // The person got nothing for this scan, so don't count it.
       await releaseQuota("scan", quota);
       if (e instanceof AIError) {
@@ -342,15 +431,18 @@ serve(async (req) => {
     }
 
     // Parse the JSON from the AI response (strip markdown fences if present)
-    let parsed;
+    // deno-lint-ignore no-explicit-any
+    let parsed: any;
     try {
-      const cleaned = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
-      parsed = JSON.parse(cleaned);
+      parsed = parseRead(content);
     } catch {
       await releaseQuota("scan", quota);
       console.error("Failed to parse AI response:", content);
       throw new Error("Failed to parse AI analysis result");
     }
+
+    parsed = await withFallback(parsed, system, userText, images, requestId);
+    parsed.aiRequestId = requestId;
 
     // Critical rule enforcement — defense in depth alongside the client's
     // own enforcement in buildScanResult(): a false "missing" must never

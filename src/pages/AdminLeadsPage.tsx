@@ -15,6 +15,7 @@ import { RefreshCw, FileImage, CheckCircle, AlertTriangle, XCircle, Lock, Histor
 import { useAdminSession } from "@/hooks/use-admin-session";
 import BrandAlertsPanel from "@/components/admin/BrandAlertsPanel";
 import RulebookPanel from "@/components/admin/RulebookPanel";
+import CostsPanel from "@/components/admin/CostsPanel";
 import { lockScanAsVersion, getPendingRequests, decideChangeRequest, getLockedVersionByScan, type ChangeRequest, type ProductVersion } from "@/lib/version-lock";
 import { useSeo } from "@/hooks/use-seo";
 
@@ -258,6 +259,7 @@ const AdminLeadsPage = () => {
             Approvals {pendingRequests.length > 0 && <Badge className="ml-1.5 h-4 px-1 text-[10px]">{pendingRequests.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="rulebook">Rulebook</TabsTrigger>
+          <TabsTrigger value="costs">Costs</TabsTrigger>
           <TabsTrigger value="brand-alerts">
             Brand alerts {openBrandAlerts > 0 && <Badge className="ml-1.5 h-4 px-1 text-[10px]">{openBrandAlerts}</Badge>}
           </TabsTrigger>
@@ -389,6 +391,10 @@ const AdminLeadsPage = () => {
 
         <TabsContent value="rulebook">
           <RulebookPanel />
+        </TabsContent>
+
+        <TabsContent value="costs">
+          <CostsPanel />
         </TabsContent>
 
         <TabsContent value="brand-alerts" forceMount className="data-[state=inactive]:hidden">
