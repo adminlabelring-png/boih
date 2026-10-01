@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ScanLine } from "lucide-react";
-import { useScan, buildScanResult, generateMockResult } from "@/lib/scan-context";
+import { AlertTriangle, RefreshCw, ScanLine } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useScan, buildScanResult } from "@/lib/scan-context";
 import { computeScanDiff, extractProductName, normalizeProductKey } from "@/lib/scan-diff";
 import { getCurrentLockedVersion, createChangeRequest } from "@/lib/version-lock";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +49,11 @@ const ScanProcessingPage = () => {
   const navigate = useNavigate();
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(0);
-  const calledRef = useRef(false);
+  // A failed read is shown as a failure with a retry, never replaced by
+  // made-up results.
+  const [failed, setFailed] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const calledRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (files.length === 0) {
@@ -56,8 +61,8 @@ const ScanProcessingPage = () => {
       return;
     }
 
-    if (calledRef.current) return;
-    calledRef.current = true;
+    if (calledRef.current === attempt) return;
+    calledRef.current = attempt;
 
     const stepTimer = setInterval(() => {
       setStepIndex((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
@@ -76,9 +81,8 @@ const ScanProcessingPage = () => {
         // The AI call has no server-side response guarantee we can see from
         // here — a stalled connection or a wedged upstream provider leaves
         // this awaiting forever with nothing to catch, silently defeating
-        // the fallback-to-mock-result path below (its whole job is to keep
-        // the flow moving when the AI call fails). An explicit timeout
-        // turns "hangs forever" into a real, catchable error.
+        // the failure screen below. An explicit timeout turns "hangs
+        // forever" into a real, catchable error.
         const abort = new AbortController();
         const timeout = setTimeout(() => abort.abort(), 45_000);
         const { data, error } = await supabase.functions
@@ -267,17 +271,15 @@ const ScanProcessingPage = () => {
           navigate("/scan", { replace: true });
           return;
         }
-        console.error("Analysis failed, using fallback:", err);
-        toast.error("AI analysis failed — showing demo results instead");
-
-        const fallback = generateMockResult(displayFileName(files));
-        fallback.isSeasonal = options.isSeasonal;
-        fallback.seasonTag = options.seasonTag;
-        setProgress(100);
-        setTimeout(() => {
-          setResult(fallback);
-          navigate("/scan/results", { replace: true });
-        }, 500);
+        console.error("Analysis failed:", err);
+        clearInterval(stepTimer);
+        clearInterval(progressTimer);
+        const aborted = err instanceof Error && err.name === "AbortError";
+        setFailed(
+          aborted
+            ? "Reading the label took too long."
+            : "We couldn't read the label this time."
+        );
       }
     };
 
@@ -287,7 +289,36 @@ const ScanProcessingPage = () => {
       clearInterval(stepTimer);
       clearInterval(progressTimer);
     };
-  }, [files, options, navigate, setResult]);
+  }, [files, options, navigate, setResult, attempt]);
+
+  const retry = () => {
+    setFailed(null);
+    setStepIndex(0);
+    setProgress(0);
+    setAttempt((a) => a + 1);
+  };
+
+  if (failed) {
+    return (
+      <div className="max-w-md mx-auto flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center">
+        <AlertTriangle className="h-12 w-12 text-[hsl(var(--risk-medium))]" />
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold">{failed}</h2>
+          <p className="text-sm text-muted-foreground">
+            Nothing was checked, so there are no results to show. Try again, or upload clearer photos.
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button onClick={retry}>
+            <RefreshCw className="h-4 w-4 mr-1.5" /> Try again
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/scan")}>
+            Upload different photos
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto flex flex-col items-center justify-center min-h-[60vh] space-y-8">

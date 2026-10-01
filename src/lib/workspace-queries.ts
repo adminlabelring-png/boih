@@ -46,3 +46,12 @@ export const fetchSuppliers = async (brandId: string): Promise<SupplierRow[]> =>
     .order("verification_score", { ascending: false });
   return (data ?? []) as unknown as SupplierRow[];
 };
+
+// "today", "1 day ago", "5 days ago" — for alert timestamps taken from the
+// rows themselves rather than made up.
+export const daysAgo = (iso: string | null | undefined): string => {
+  if (!iso) return "";
+  const days = Math.floor((Date.now() - +new Date(iso)) / 86400000);
+  if (days <= 0) return "Today";
+  return days === 1 ? "1 day ago" : `${days} days ago`;
+};
