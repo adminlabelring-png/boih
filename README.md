@@ -52,6 +52,7 @@ This project is built with:
 
 The frontend is a static Vite/React app hosted on **Cloudflare Pages**; the backend is **Supabase** (Postgres + Auth + Storage + Edge Functions). Neither uses GitHub Actions minutes.
 
+- **While switching hosts:** GitHub Pages (`.github/workflows/deploy-pages.yml`, which adds its own `404.html` fallback at build time), Vercel and Cloudflare Pages all build `main`. Delete that workflow to retire GitHub Pages, and disconnect the Vercel project once Cloudflare serves the domain.
 - **Frontend:** Cloudflare Pages' Git integration builds every push. Branches and pull requests get a preview URL; `main` goes to production at `www.labelring.co.uk` (`labelring.co.uk` redirects there). Build settings: framework preset **React (Vite)**, build command `npm run build`, output directory `dist`, Node version from `.node-version`. With no `404.html` in the build, Pages serves `index.html` for every client-side route. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_PROJECT_ID` and `VITE_SUPABASE_PUBLISHABLE_KEY` as environment variables for both Production and Preview.
 - **DNS:** the domain stays registered with IONOS; its nameservers point to Cloudflare, which holds the DNS records (website, email and verification records).
 - **Backend:** the Supabase GitHub integration (Project Settings → Integrations → GitHub, with **Deploy to production** on) applies new migrations and deploys the edge functions listed in `supabase/config.toml` when `main` changes. `sync-odoo-lead` is deployed separately and isn't listed.
