@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, Outlet } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAdminSession } from "@/hooks/use-admin-session";
+import { useSession } from "@/hooks/use-session";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { BrandProvider, useBrand } from "@/lib/brand-context";
@@ -19,24 +19,26 @@ const TopBar = ({ email }: { email: string }) => {
       </div>
       <div className="flex items-center gap-2 ml-auto">
         <BrandSwitcher />
-        <div
+        <Link
+          to="/account"
           title={email}
           className="h-7 w-7 rounded-full bg-accent text-accent-foreground text-[11px] font-semibold inline-flex items-center justify-center uppercase"
         >
           {email.slice(0, 1) || "?"}
-        </div>
+        </Link>
       </div>
     </header>
   );
 };
 
-// Shown instead of the pages when there are no brands to show.
+// Shown instead of the pages when the account has no brand yet.
 const NoBrands = () => (
-  <div className="max-w-md rounded-lg border bg-card p-6 space-y-2">
-    <h1 className="text-lg font-semibold">No brands yet</h1>
+  <div className="max-w-md rounded-lg border bg-card p-6 space-y-3">
+    <h1 className="text-lg font-semibold">No brand yet</h1>
     <p className="text-sm text-muted-foreground">
-      The workspace shows a brand's products, suppliers and label versions. Brands are added with brand accounts.
+      Create your brand to save labels to it and keep every version.
     </p>
+    <Button asChild size="sm"><Link to="/account">Create a brand</Link></Button>
   </div>
 );
 
@@ -82,31 +84,25 @@ const Shell = ({ email }: { email: string }) => {
   );
 };
 
-// Brands can't sign in yet, so the workspace is for Labelring admins only
-// until brand accounts exist.
+// Signed-in brand members see their brands; admins see every brand.
 const WorkspaceLayout = () => {
-  const { session, isAdmin, loading } = useAdminSession();
+  const { session, loading } = useSession();
   // Internal app pages: keep them out of search results.
   useSeo({ title: "Workspace | Labelring", description: "Labelring workspace.", noindex: true });
 
   if (loading) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
-  if (!session || !isAdmin) {
+  if (!session) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
         <div className="max-w-sm w-full rounded-lg border bg-card p-6 space-y-4">
           <div className="space-y-1">
             <h1 className="text-xl font-semibold">Workspace</h1>
             <p className="text-sm text-muted-foreground">
-              {session
-                ? `${session.user.email} isn't an admin account. The workspace opens to brands with brand accounts.`
-                : "The workspace opens to brands with brand accounts. Labelring admins can sign in on the admin page."}
+              Sign in to see your brand's saved labels and their versions.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {!session && (
-              <Button asChild size="sm"><Link to="/admin/leads">Admin sign in</Link></Button>
-            )}
-            <Button asChild size="sm" variant="outline"><Link to="/scan">Scan a label</Link></Button>
+            <Button asChild size="sm"><Link to="/account">Sign in or create an account</Link></Button>
           </div>
         </div>
       </div>
@@ -114,7 +110,7 @@ const WorkspaceLayout = () => {
   }
 
   return (
-    <BrandProvider>
+    <BrandProvider key={session.user.id}>
       <Shell email={session.user.email ?? ""} />
     </BrandProvider>
   );

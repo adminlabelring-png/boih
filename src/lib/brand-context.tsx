@@ -17,10 +17,12 @@ interface BrandContextValue {
   brands: Brand[];
   loading: boolean;
   switchBrand: (id: string) => void;
+  refresh: () => void;
 }
 
 const BrandContext = createContext<BrandContextValue | undefined>(undefined);
-const STORAGE_KEY = "labelring.active_brand_id";
+export const ACTIVE_BRAND_KEY = "labelring.active_brand_id";
+const STORAGE_KEY = ACTIVE_BRAND_KEY;
 
 export const verticalColor = (v: Vertical): string => {
   switch (v) {
@@ -43,6 +45,8 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloads, setReloads] = useState(0);
+  const refresh = useCallback(() => setReloads((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,7 +66,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [reloads]);
 
   const switchBrand = useCallback((id: string) => {
     setActiveId(id);
@@ -72,7 +76,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const brand = brands.find(b => b.id === activeId) ?? null;
 
   return (
-    <BrandContext.Provider value={{ brand, brands, loading, switchBrand }}>
+    <BrandContext.Provider value={{ brand, brands, loading, switchBrand, refresh }}>
       {children}
     </BrandContext.Provider>
   );

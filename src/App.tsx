@@ -25,6 +25,7 @@ const PublicLabelPage = lazy(() => import("@/pages/PublicLabelPage"));
 const InsightsPage = lazy(() => import("@/pages/InsightsPage"));
 const InsightPostPage = lazy(() => import("@/pages/InsightPostPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+const AccountPage = lazy(() => import("@/pages/AccountPage"));
 const DashboardPage = lazy(() => import("@/pages/workspace/DashboardPage"));
 const LabelsPage = lazy(() => import("@/pages/workspace/LabelsPage"));
 const ProductsPage = lazy(() => import("@/pages/workspace/ProductsPage"));
@@ -62,6 +63,7 @@ const App = () => (
                 <Route path="/admin/leads" element={<AdminLeadsPage />} />
                 <Route path="/admin/products/:productKey" element={<ProductHistoryPage />} />
                 <Route path="/generate" element={<GenerateLabelPage />} />
+                <Route path="/account" element={<AccountPage />} />
                 <Route path="/insights" element={<InsightsPage />} />
                 <Route path="/insights/:slug" element={<InsightPostPage />} />
               </Route>

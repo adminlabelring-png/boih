@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useBrand } from "@/lib/brand-context";
 import { daysAgo, fetchProducts, fetchSuppliers, ProductRow, SupplierRow } from "@/lib/workspace-queries";
 import StatusPill from "@/components/workspace/StatusPill";
+import { fetchBrandLabels, type BrandLabel } from "@/lib/brand-labels";
 
 interface Alert {
   severity: "danger" | "warn" | "info";
@@ -13,8 +14,15 @@ interface Alert {
   time: string;
 }
 
-const buildAlerts = (products: ProductRow[], suppliers: SupplierRow[]): Alert[] => {
+const buildAlerts = (products: ProductRow[], suppliers: SupplierRow[], labels: BrandLabel[]): Alert[] => {
   const alerts: Alert[] = [];
+  const failing = labels.filter(l => l.compliance_score !== null && l.compliance_score < 80);
+  if (failing.length) {
+    alerts.push({ severity: failing.some(l => (l.compliance_score ?? 0) < 50) ? "danger" : "warn",
+      title: `${failing.length} label${failing.length > 1 ? "s" : ""} with failing checks`,
+      sub: failing.slice(0, 3).map(l => `${l.product_name || "Untitled"} (${l.compliance_score}%)`).join(", "),
+      time: daysAgo(failing[0].updated_at) });
+  }
   const flaggedSupplier = suppliers.find(s => s.verification_status === "flagged");
   if (flaggedSupplier) {
     alerts.push({ severity: "danger", title: "Supplier verification flagged",
@@ -53,9 +61,11 @@ const DashboardPage = () => {
   const { brand, loading } = useBrand();
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierRow[]>([]);
+  const [allLabels, setLabels] = useState<BrandLabel[]>([]);
 
   useEffect(() => {
     if (!brand) return;
+    fetchBrandLabels(brand.id).then(setLabels).catch(() => setLabels([]));
     fetchProducts(brand.id).then(setProducts);
     fetchSuppliers(brand.id).then(setSuppliers);
   }, [brand]);
@@ -63,15 +73,16 @@ const DashboardPage = () => {
   if (loading || !brand) return <div className="text-sm text-muted-foreground">Loading workspace…</div>;
 
   const monthAgo = Date.now() - 30 * 86400000;
-  const updatedThisMonth = products.filter(p => +new Date(p.updated_at) >= monthAgo).length;
-  const lastUpdated = products[0]?.updated_at;
+  const updatedThisMonth = allLabels.filter(l => !l.archived_at && +new Date(l.updated_at) >= monthAgo).length;
+  const lastUpdated = allLabels.find(l => !l.archived_at)?.updated_at;
   const missingMaterialData = products.filter(p => Object.keys(p.material_data ?? {}).length === 0).length;
 
-  const total = products.length;
-  const approved = products.filter(p => p.label_status === "approved").length;
-  const flagged = products.filter(p => p.label_status === "flagged").length;
-  const inReview = products.filter(p => p.label_status === "in_review").length;
-  const alerts = buildAlerts(products, suppliers);
+  const labels = allLabels.filter(l => !l.archived_at);
+  const total = labels.length;
+  const scored = labels.filter(l => l.compliance_score !== null);
+  const avgScore = scored.length ? Math.round(scored.reduce((a, l) => a + (l.compliance_score ?? 0), 0) / scored.length) : null;
+  const failingCount = scored.filter(l => (l.compliance_score ?? 0) < 80).length;
+  const alerts = buildAlerts(products, suppliers, labels);
 
   return (
     <div className="space-y-5">
@@ -80,7 +91,7 @@ const DashboardPage = () => {
         <div>
           <h1 className="text-lg font-semibold">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {brand.name} — {total} active SKUs{lastUpdated ? ` · Last updated ${daysAgo(lastUpdated).toLowerCase()}` : ""}
+            {brand.name} — {total} saved label{total === 1 ? "" : "s"}{lastUpdated ? ` · Last updated ${daysAgo(lastUpdated).toLowerCase()}` : ""}
           </p>
         </div>
         <Button asChild size="sm" className="gap-1.5"><Link to="/generate"><Plus className="h-4 w-4" /> New label</Link></Button>
@@ -103,10 +114,10 @@ const DashboardPage = () => {
       {/* Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Total labels", icon: Tag,            value: total,    sub: `${updatedThisMonth} updated this month`, tone: "ok" },
-          { label: "Approved",     icon: CheckCircle2,   value: approved, sub: total ? `${Math.round((approved/total)*100)}% of labels` : "—", tone: "ok" },
-          { label: "Flagged",      icon: AlertTriangle,  value: flagged,  sub: "Needs action",     tone: flagged ? "danger" : "ok" },
-          { label: "In review",    icon: Clock,          value: inReview, sub: "Awaiting approval", tone: "warn" },
+          { label: "Saved labels",   icon: Tag,           value: total, sub: `${updatedThisMonth} updated this month`, tone: "ok" },
+          { label: "Checks passed",  icon: CheckCircle2,  value: avgScore === null ? "—" : `${avgScore}%`, sub: "Average, latest versions", tone: avgScore !== null && avgScore < 80 ? "warn" : "ok" },
+          { label: "Need work",      icon: AlertTriangle, value: failingCount, sub: "Below 80% checks passed", tone: failingCount ? "danger" : "ok" },
+          { label: "Products",       icon: Clock,         value: products.length, sub: "Tracked products", tone: "ok" },
         ].map(m => (
           <div key={m.label} className="rounded-lg border bg-card p-4">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><m.icon className="h-3.5 w-3.5" /> {m.label}</div>
@@ -126,37 +137,31 @@ const DashboardPage = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-[11px] uppercase tracking-wider text-muted-foreground bg-muted/50">
-                <th className="text-left font-medium px-4 py-2.5">SKU / Product</th>
-                <th className="text-left font-medium px-4 py-2.5">Type</th>
-                <th className="text-left font-medium px-4 py-2.5">Status</th>
+                <th className="text-left font-medium px-4 py-2.5">Product</th>
+                <th className="text-left font-medium px-4 py-2.5">Category</th>
+                <th className="text-left font-medium px-4 py-2.5">Checks passed</th>
                 <th className="text-left font-medium px-4 py-2.5">Version</th>
                 <th className="text-left font-medium px-4 py-2.5">Updated</th>
               </tr>
             </thead>
             <tbody>
-              {products.slice(0, 5).map(p => (
-                <tr key={p.id} className="border-t hover:bg-muted/30">
+              {labels.slice(0, 5).map(l => (
+                <tr key={l.id} className="border-t hover:bg-muted/30">
                   <td className="px-4 py-2.5">
-                    <Link to={`/admin/products/${p.product_key}`} className="flex items-center gap-2.5">
-                      <div className="h-7 w-7 rounded-md bg-muted border flex items-center justify-center text-sm">{p.thumbnail ?? "📦"}</div>
-                      <div>
-                        <div className="text-[13px] font-medium">{p.name}</div>
-                        <div className="text-[11px] text-muted-foreground">{p.sku}</div>
-                      </div>
+                    <Link to={`/generate?label=${l.id}`} className="text-[13px] font-medium hover:underline">
+                      {l.product_name || "Untitled label"}
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5 space-x-1">
-                    {p.label_types.map(t => (
-                      <span key={t} className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent text-accent-foreground">{t}</span>
-                    ))}
-                  </td>
-                  <td className="px-4 py-2.5"><StatusPill status={p.label_status} /></td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{p.label_version}</td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground">{new Date(p.updated_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground">{l.category ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-xs">{l.compliance_score === null ? "—" : `${l.compliance_score}%`}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">v{l.current_version}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground">{new Date(l.updated_at).toLocaleDateString()}</td>
                 </tr>
               ))}
-              {products.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No products yet.</td></tr>
+              {labels.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  No saved labels yet. <Link to="/generate" className="underline">Create one</Link>.
+                </td></tr>
               )}
             </tbody>
           </table>
