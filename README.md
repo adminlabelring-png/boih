@@ -50,19 +50,13 @@ This project is built with:
 
 ## Deployment
 
-The frontend is a static Vite/React app hosted on **Vercel**; the backend is **Supabase** (Postgres + Auth + Storage + Edge Functions). Neither uses GitHub Actions minutes.
+The frontend is a static Vite/React app hosted on **Cloudflare Pages**; the backend is **Supabase** (Postgres + Auth + Storage + Edge Functions). Neither uses GitHub Actions minutes.
 
-- **Frontend:** Vercel's Git integration builds every push. Pull requests get a preview URL; `main` goes to production at `www.labelring.co.uk` (`labelring.co.uk` redirects there). Build settings are Vercel's Vite defaults; `vercel.json` sends every path to `index.html` so client-side routes work. The `VITE_SUPABASE_URL`, `VITE_SUPABASE_PROJECT_ID` and `VITE_SUPABASE_PUBLISHABLE_KEY` environment variables are set in the Vercel project.
+- **Frontend:** Cloudflare Pages' Git integration builds every push. Branches and pull requests get a preview URL; `main` goes to production at `www.labelring.co.uk` (`labelring.co.uk` redirects there). Build settings: framework preset **React (Vite)**, build command `npm run build`, output directory `dist`, Node version from `.node-version`. With no `404.html` in the build, Pages serves `index.html` for every client-side route. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_PROJECT_ID` and `VITE_SUPABASE_PUBLISHABLE_KEY` as environment variables for both Production and Preview.
+- **DNS:** the domain stays registered with IONOS; its nameservers point to Cloudflare, which holds the DNS records (website, email and verification records).
 - **Backend:** the Supabase GitHub integration (Project Settings → Integrations → GitHub, with **Deploy to production** on) applies new migrations and deploys the edge functions listed in `supabase/config.toml` when `main` changes. `sync-odoo-lead` is deployed separately and isn't listed.
 - **Fallback:** `.github/workflows/deploy-supabase.yml` does the same deploy by hand (Actions → Run workflow) if the integration is ever off.
 - **Weekly:** `.github/workflows/rulebook-sources.yml` checks the official cosmetics sources on Mondays (about a minute of Actions time).
-
-### DNS (IONOS)
-
-| Host | Type | Value |
-| --- | --- | --- |
-| `www` | CNAME | `cname.vercel-dns.com` |
-| `@` | A | `76.76.21.21` |
 
 ### GitHub Actions secrets (manual fallback and weekly source check)
 
