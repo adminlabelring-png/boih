@@ -55,7 +55,8 @@ import ScanTodo from "@/components/generator/ScanTodo";
 import { diffAgainstScan, type LabelChange, type ScanHandoff } from "@/lib/scan-to-label";
 import ChangeReview from "@/components/generator/ChangeReview";
 import PrintDialog from "@/components/generator/PrintDialog";
-import { buildPrintPdf, loadFonts, type PrintSpec } from "@/lib/print-label";
+import { buildPrintPdf, loadFonts, type PrintExtras, type PrintSpec } from "@/lib/print-label";
+import { finishPdfX, pdfBytes, preflightPdfX1a } from "@/lib/pdfx";
 
 import { CATEGORIES } from "@/lib/categories";
 import LeadCaptureDialog, { hasSubmittedLead, getSignupId } from "@/components/LeadCaptureDialog";
@@ -490,10 +491,10 @@ const GenerateLabelPage = () => {
     doc.save(`${filename}-label.pdf`);
   };
 
-  const handlePrintExport = async (spec: PrintSpec) => {
+  const handlePrintExport = async (spec: PrintSpec, extras: PrintExtras) => {
     saveLabel().catch((e) => console.warn("label persist failed", e));
     const fonts = await loadFonts();
-    const { doc, layout } = buildPrintPdf({
+    const { doc, layout, warnings } = buildPrintPdf({
       fields,
       pack,
       warnings: derivedWarnings,
@@ -503,10 +504,26 @@ const GenerateLabelPage = () => {
       findings: rulebookFindings,
       rulebook: draftCheck?.rulebook ?? null,
       builtInChecks: rulebookFindings ? undefined : rules.map((r) => ({ label: r.label, status: r.status })),
+      extras,
     });
+    const pdf = finishPdfX(doc);
+    const preflight = preflightPdfX1a(pdf);
     const filename = (fields.productName || "label").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
-    doc.save(`${filename}-print-${spec.widthMm}x${spec.heightMm}mm.pdf`);
-    return { fits: layout.fits, fontSizePt: layout.fontSizePt, minFontSizePt: layout.minFontSizePt };
+    const url = URL.createObjectURL(new Blob([pdfBytes(pdf)], { type: "application/pdf" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${filename}-print-${spec.widthMm}x${spec.heightMm}mm.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    return {
+      fits: layout.fits,
+      fontSizePt: layout.fontSizePt,
+      minFontSizePt: layout.minFontSizePt,
+      warnings,
+      preflight,
+    };
   };
 
   // Field row with optional AI suggest button
@@ -1201,7 +1218,13 @@ const GenerateLabelPage = () => {
             <Printer className="h-4 w-4" />
             Print-ready PDF
           </Button>
-          <PrintDialog open={printOpen} onOpenChange={setPrintOpen} onExport={handlePrintExport} />
+          <PrintDialog
+            open={printOpen}
+            onOpenChange={setPrintOpen}
+            onExport={handlePrintExport}
+            showSymbols={pack === "cosmetic"}
+            defaultLeafletSymbol={pack === "cosmetic" && packFormat === "leaflet"}
+          />
 
           <p className="text-[11px] text-muted-foreground">
             {DRAFT_LABEL_DISCLAIMER}

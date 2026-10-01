@@ -13,6 +13,8 @@ import {
   type FontData,
 } from "./print-label";
 import { emptyLabel, type LabelFields } from "./label-rules";
+import { finishPdfX, preflightPdfX1a, rgbaToCmyk, type CmykImage } from "./pdfx";
+import { parseGtin } from "./barcode";
 
 let fonts: FontData;
 beforeAll(() => {
@@ -109,5 +111,95 @@ describe("buildPrintPdf", () => {
     const media = pdf.match(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/);
     expect(Number(media?.[1])).toBeCloseTo((112 * 72) / 25.4, 0);
     expect(Number(media?.[2])).toBeCloseTo((92 * 72) / 25.4, 0);
+  });
+});
+
+describe("print extras and PDF/X-1a", () => {
+  const logo = (): CmykImage & { heightMm: number } => {
+    // 120 × 60 px red-on-transparent logo
+    const w = 120;
+    const h = 60;
+    const rgba = new Uint8ClampedArray(w * h * 4);
+    for (let i = 0; i < w * h; i++) rgba.set(i % 3 ? [200, 20, 40, 255] : [0, 0, 0, 0], i * 4);
+    return { width: w, height: h, cmyk: rgbaToCmyk(rgba), heightMm: 8 };
+  };
+
+  it("builds artwork with colour, logo, barcode and symbols that passes PDF/X-1a preflight", () => {
+    const parsed = parseGtin("5012345678900");
+    if (!parsed.ok) throw new Error("bad gtin");
+    const { doc, warnings, barcodeMagnification, layout } = buildPrintPdf({
+      fields: { ...cosmetic, dateType: "best_before", bestBefore: "06/2028" },
+      pack: "cosmetic",
+      spec: { widthMm: 90, heightMm: 120, bleedMm: 3, safeMarginMm: 3 },
+      fonts,
+      extras: { accent: [0, 0.9, 0.6, 0.1], logo: logo(), barcode: parsed.barcode, leafletSymbol: true },
+    });
+    expect(barcodeMagnification).toBe(1);
+    expect(layout.fits).toBe(true);
+    // 120 px across ~ 45 mm is well under 300 ppi
+    expect(warnings.some((w) => /ppi/.test(w))).toBe(true);
+    const pdf = finishPdfX(doc);
+    expect(pdf).toContain("/GTS_PDFXVersion (PDF/X-1a:2001)");
+    expect(pdf).toContain("/Trapped /False");
+    expect(pdf).toContain("/OutputConditionIdentifier (FOGRA39)");
+    expect(pdf).toContain("/ColorSpace /DeviceCMYK");
+    const checks = preflightPdfX1a(pdf);
+    expect(checks.filter((c) => !c.ok)).toEqual([]);
+    expect(checks.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("warns, rather than shrinking below 80%, when the barcode doesn't fit", () => {
+    const parsed = parseGtin("4006381333931");
+    if (!parsed.ok) throw new Error("bad gtin");
+    const { warnings, barcodeMagnification } = buildPrintPdf({
+      fields: cosmetic,
+      pack: "cosmetic",
+      spec: DEFAULT_PRINT_SPEC,
+      fonts,
+      extras: { barcode: parsed.barcode },
+    });
+    // 70 mm label: 66 mm safe width fits at 100%
+    expect(barcodeMagnification).toBe(1);
+    const small = buildPrintPdf({
+      fields: cosmetic,
+      pack: "cosmetic",
+      spec: { widthMm: 30, heightMm: 40, bleedMm: 3, safeMarginMm: 2 },
+      fonts,
+      extras: { barcode: parsed.barcode },
+    });
+    expect(small.barcodeMagnification).toBeNull();
+    expect(small.warnings.some((w) => /barcode needs at least/.test(w))).toBe(true);
+    expect(warnings.some((w) => /barcode needs/.test(w))).toBe(false);
+  });
+
+  it("puts the hourglass before a cosmetic best-before date and the hand-in-book on request", () => {
+    const blocks = labelBlocks({ ...cosmetic, dateType: "best_before", bestBefore: "06/2028" }, "cosmetic", [], {
+      leafletSymbol: true,
+    });
+    const icons = blocks.flatMap((b) => (b.kind === "text" && b.icon ? [b.icon] : []));
+    expect(icons).toEqual(["leaflet", "hourglass"]);
+  });
+
+  it("preflight catches RGB colour, transparency and missing PDF/X marking", () => {
+    const doc = new jsPDF({ unit: "mm", format: [50, 50] });
+    doc.setTextColor(255, 0, 0);
+    doc.text("RGB", 10, 10);
+    const checks = preflightPdfX1a(doc.output());
+    const failed = checks.filter((c) => !c.ok).map((c) => c.label);
+    expect(failed).toEqual(
+      expect.arrayContaining([
+        "Identified as PDF/X-1a:2001",
+        "Output intent names the printing condition",
+        "Colour is CMYK or grey only (no RGB)",
+        "All fonts embedded",
+      ])
+    );
+  });
+
+  it("converts RGB to CMYK, flattening transparency onto white", () => {
+    const cmyk = rgbaToCmyk(new Uint8ClampedArray([255, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 255]));
+    expect(Array.from(cmyk.slice(0, 4))).toEqual([0, 255, 255, 0]); // red
+    expect(Array.from(cmyk.slice(4, 8))).toEqual([0, 0, 0, 0]); // transparent -> white paper
+    expect(Array.from(cmyk.slice(8, 12))).toEqual([0, 0, 0, 255]); // black -> K only
   });
 });
