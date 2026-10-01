@@ -1,1 +1,17 @@
 project_id = "iufpejjamjiuluuugkjn"
+
+# Edge functions deployed by the Supabase GitHub integration when main
+# changes ("Deploy to production"). Only functions listed here are
+# deployed; verify_jwt matches how each one is called. sync-odoo-lead is
+# managed separately and deliberately not listed.
+[functions.analyze-label]
+verify_jwt = false
+
+[functions.generate-label]
+verify_jwt = true
+
+[functions.check-label]
+verify_jwt = true
+
+[functions.send-brand-alerts]
+verify_jwt = true

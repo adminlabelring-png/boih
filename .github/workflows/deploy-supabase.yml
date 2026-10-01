@@ -1,10 +1,9 @@
-name: Deploy Supabase schema & functions
+name: Deploy Supabase schema & functions (manual fallback)
 
+# Normally the Supabase GitHub integration deploys migrations and the edge
+# functions listed in supabase/config.toml when main changes. Run this by
+# hand only if that integration is off or a deploy needs repeating.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "supabase/**"
   workflow_dispatch:
 
 jobs:

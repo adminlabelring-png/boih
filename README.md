@@ -50,20 +50,26 @@ This project is built with:
 
 ## Deployment
 
-The frontend is a static Vite/React app hosted on **GitHub Pages**; the backend is **Supabase** (Postgres + Auth + Storage + Edge Functions).
+The frontend is a static Vite/React app hosted on **Vercel**; the backend is **Supabase** (Postgres + Auth + Storage + Edge Functions). Neither uses GitHub Actions minutes.
 
-- Pushing to `main` triggers `.github/workflows/deploy-pages.yml`, which builds the app and publishes `dist/` to GitHub Pages.
-- Pushing changes under `supabase/` triggers `.github/workflows/supabase-deploy.yml`, which runs `supabase db push` and deploys the edge functions (`analyze-label`, `generate-label`) to the linked Supabase project.
+- **Frontend:** Vercel's Git integration builds every push. Pull requests get a preview URL; `main` goes to production at `www.labelring.co.uk` (`labelring.co.uk` redirects there). Build settings are Vercel's Vite defaults; `vercel.json` sends every path to `index.html` so client-side routes work. The `VITE_SUPABASE_URL`, `VITE_SUPABASE_PROJECT_ID` and `VITE_SUPABASE_PUBLISHABLE_KEY` environment variables are set in the Vercel project.
+- **Backend:** the Supabase GitHub integration (Project Settings → Integrations → GitHub, with **Deploy to production** on) applies new migrations and deploys the edge functions listed in `supabase/config.toml` when `main` changes. `sync-odoo-lead` is deployed separately and isn't listed.
+- **Fallback:** `.github/workflows/deploy-supabase.yml` does the same deploy by hand (Actions → Run workflow) if the integration is ever off.
+- **Weekly:** `.github/workflows/rulebook-sources.yml` checks the official cosmetics sources on Mondays (about a minute of Actions time).
 
-### Required GitHub Actions secrets
+### DNS (IONOS)
+
+| Host | Type | Value |
+| --- | --- | --- |
+| `www` | CNAME | `cname.vercel-dns.com` |
+| `@` | A | `76.76.21.21` |
+
+### GitHub Actions secrets (manual fallback and weekly source check)
 
 | Secret | Purpose |
 | --- | --- |
-| `VITE_SUPABASE_URL` | Supabase project URL, used at build time |
-| `VITE_SUPABASE_PROJECT_ID` | Supabase project ref |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key (public-safe) |
 | `SUPABASE_ACCESS_TOKEN` | Supabase management API token, used by the CLI to link/push/deploy |
-| `SUPABASE_PROJECT_ID` | Supabase project ref (same value as above) |
+| `SUPABASE_PROJECT_ID` | Supabase project ref |
 | `SUPABASE_DB_PASSWORD` | Database password, needed for `supabase db push` |
 | `OPENROUTER_API_KEY` | OpenRouter API key used by the `analyze-label`/`generate-label` edge functions |
 
@@ -89,7 +95,3 @@ In Supabase **Authentication**:
 
 - **Sign In / Providers → Email**: sign-ups enabled, and **Confirm email** on, so an account needs a working inbox.
 - **URL Configuration**: Site URL `https://www.labelring.co.uk`, and add `https://www.labelring.co.uk/account` to the redirect URLs (confirmation and password-reset links return there).
-
-### GitHub Pages settings
-
-In the repo's **Settings → Pages**, set the source to "GitHub Actions". The site is served from the custom domain `www.labelring.co.uk` at the root, so the Vite `base` in `vite.config.ts` is `/`. If you ever move back to the default project-page URL (`https://<user>.github.io/labelring/`) instead of a custom domain, `base` needs to become `/labelring/` again.
