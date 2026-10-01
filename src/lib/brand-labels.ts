@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { emptyLabel, type LabelFields } from "@/lib/label-rules";
+import type { VariantText } from "@/lib/label-variants";
 
 // A brand's saved labels. Each save is a new version (brand_label_versions)
 // holding the label builder's state; the database records what changed
@@ -10,6 +11,8 @@ export interface LabelData {
   markets: string[];
   pack: string | null;
   countries: string[];
+  // Market versions' own wording, by version id (e.g. "EU-DE").
+  variants?: Record<string, VariantText>;
 }
 
 export interface BrandLabel {
@@ -53,6 +56,7 @@ export const normaliseLabelData = (raw: unknown): LabelData => {
     markets: Array.isArray(d.markets) ? d.markets : ["GB"],
     pack: typeof d.pack === "string" ? d.pack : null,
     countries: Array.isArray(d.countries) ? d.countries : [],
+    ...(d.variants && typeof d.variants === "object" ? { variants: d.variants } : {}),
   };
 };
 
@@ -79,7 +83,11 @@ export const templateFrom = (data: LabelData): LabelData => {
   for (const k of PRODUCT_SPECIFIC_FIELDS) {
     (fields as Record<string, unknown>)[k] = emptyLabel[k];
   }
-  return { ...data, fields };
+  // Translated product names belong to the old product too.
+  const variants = data.variants
+    ? Object.fromEntries(Object.entries(data.variants).map(([id, t]) => [id, { ...t, productName: "" }]))
+    : undefined;
+  return { ...data, fields, ...(variants ? { variants } : {}) };
 };
 
 export const fetchBrandLabels = async (brandId: string): Promise<BrandLabel[]> => {
@@ -200,4 +208,5 @@ export const CHANGE_FIELD_NAMES: Record<string, string> = {
   markets: "Markets",
   pack: "Pack",
   countries: "EU countries",
+  variants: "Market versions",
 };

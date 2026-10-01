@@ -294,6 +294,12 @@ async function callAI(system: string, user: string): Promise<string> {
   }
 }
 
+const TRANSLATE_TO: Record<string, { language: string; country: string }> = {
+  de: { language: "German", country: "Germany" },
+  fr: { language: "French", country: "France" },
+};
+const TRANSLATABLE_KEYS = ["productName", "instructionsForUse", "storageInstructions", "countryOfOrigin"];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   let quota: Awaited<ReturnType<typeof consumeQuota>> | null = null;
@@ -306,7 +312,7 @@ Deno.serve(async (req) => {
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    const mode = body.mode as "field" | "preview";
+    const mode = body.mode as "field" | "preview" | "translate";
     const fields: FieldsIn = body.fields ?? {};
     const pack: Pack = (body.pack as Pack) || "generic";
 
@@ -337,6 +343,47 @@ Deno.serve(async (req) => {
       const user = `Compose the on-pack copy block for this label:\n${contextBlock(fields, pack)}`;
       const preview = await callAI(system, user);
       return new Response(JSON.stringify({ preview }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (mode === "translate") {
+      // Market versions: the brand's English label wording into the
+      // language a country requires. The brand reviews the result.
+      const target = TRANSLATE_TO[String(body.language)];
+      const raw = (body.texts ?? {}) as Record<string, unknown>;
+      const texts: Record<string, string> = {};
+      for (const k of TRANSLATABLE_KEYS) {
+        const v = raw[k];
+        if (typeof v === "string" && v.trim()) texts[k] = v.trim().slice(0, 2000);
+      }
+      if (!target || !Object.keys(texts).length) {
+        return new Response(JSON.stringify({ error: "Nothing to translate" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const system =
+        `You translate cosmetic product label text from English into ${target.language} for sale in ${target.country}. ` +
+        "Write it as on-pack wording a native speaker expects. Keep brand names, INCI ingredient names, numbers and units unchanged. " +
+        "Use the usual regulatory phrasing for precautions (for example the standard wording for avoiding contact with eyes). " +
+        "Translate country names. Return only a JSON object with exactly the same keys and the translated strings.";
+      const content = await callAI(system, JSON.stringify(texts));
+      const cleaned = content.replace(/^```(?:json)?\s*|\s*```$/g, "");
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      let parsed: Record<string, unknown> = {};
+      try {
+        parsed = JSON.parse(start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned);
+      } catch {
+        throw new Error("The translation came back in an unexpected format. Try again.");
+      }
+      const out: Record<string, string> = {};
+      for (const k of Object.keys(texts)) {
+        const v = parsed[k];
+        if (typeof v === "string" && v.trim()) out[k] = v.trim().slice(0, 2000);
+      }
+      return new Response(JSON.stringify({ texts: out }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
