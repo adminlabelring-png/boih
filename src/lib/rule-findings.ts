@@ -1,12 +1,14 @@
 import type { RuleFinding, RulebookStamp } from "./scan-context";
 
 // Shared between the results page and the PDF export so both describe
-// rule findings and the rulebook stamp in the same words.
+// rule findings and the rulebook stamp in the same words. Colours follow
+// traffic lights: fail and review are red (both need action), couldn't
+// check is amber, pass is green.
 
 export const findingStatusLabel = (status: RuleFinding["status"]) => {
   switch (status) {
     case "pass": return "Meets rule";
-    case "review": return "Check";
+    case "review": return "Action needed";
     case "not_verified": return "Couldn't check";
     case "fail": return "Action needed";
   }
