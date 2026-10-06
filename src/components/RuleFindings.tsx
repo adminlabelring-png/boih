@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CheckCircle, AlertTriangle, HelpCircle, XCircle, ChevronDown, ExternalLink } from "lucide-react";
 import type { RuleFinding, RulebookStamp } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
-import { describeMarkets, findingStatusLabel, rulebookStampText } from "@/lib/rule-findings";
+import { describeMarkets, findingStatusLabel, rulebookStampText, summarizeFindings } from "@/lib/rule-findings";
 
 const statusIcon = (status: RuleFinding["status"]) => {
   switch (status) {
@@ -86,11 +86,31 @@ const FindingGroup = ({ title, findings }: { title: string; findings: RuleFindin
   );
 };
 
+// One of the three summary counts. Issues and couldn't-check carry the same
+// weight: a rule we couldn't check still needs action before the label can
+// be relied on. A zero is shown muted.
+const SummaryCount = ({ count, label, tone }: { count: number; label: string; tone: "high" | "medium" | "low" }) => (
+  <div
+    className={cn(
+      "rounded-md px-3 py-2",
+      count === 0
+        ? "bg-muted text-muted-foreground"
+        : tone === "high"
+          ? "compliance-badge-low"
+          : tone === "medium"
+            ? "compliance-badge-medium"
+            : "compliance-badge-high"
+    )}
+  >
+    <p className="text-2xl font-semibold leading-none tabular-nums">{count}</p>
+    <p className="text-xs font-medium mt-1">{label}</p>
+  </div>
+);
+
 const RuleFindings = ({ findings, rulebook }: { findings: RuleFinding[]; rulebook: RulebookStamp }) => {
   const legal = findings.filter((f) => f.severity === "legal");
   const bestPractice = findings.filter((f) => f.severity === "best_practice");
-  const actionCount = legal.filter((f) => f.status === "fail").length;
-  const checkCount = findings.filter((f) => f.status === "review" || f.status === "not_verified").length;
+  const summary = summarizeFindings(findings);
 
   return (
     <div className="rounded-lg border bg-card">
@@ -98,9 +118,12 @@ const RuleFindings = ({ findings, rulebook }: { findings: RuleFinding[]; ruleboo
         <h2 className="text-base font-semibold">Regulatory checks</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
           Checked against current {describeMarkets(rulebook.markets)} cosmetics regulations
-          {" · "}
-          {actionCount} legal {actionCount === 1 ? "issue" : "issues"}, {checkCount} to check
         </p>
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          <SummaryCount count={summary.issues} label={summary.issues === 1 ? "Issue found" : "Issues found"} tone="high" />
+          <SummaryCount count={summary.notChecked} label="Couldn't check" tone="medium" />
+          <SummaryCount count={summary.passed} label="Passed" tone="low" />
+        </div>
       </div>
       <div className="divide-y">
         <FindingGroup title="Legal requirements" findings={legal} />
