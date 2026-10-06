@@ -7,8 +7,8 @@ import { describeMarkets, findingStatusLabel, rulebookStampText, summarizeFindin
 const statusIcon = (status: RuleFinding["status"]) => {
   switch (status) {
     case "pass": return <CheckCircle className="h-4 w-4 text-[hsl(var(--risk-low))] shrink-0 mt-0.5" />;
-    case "review": return <AlertTriangle className="h-4 w-4 text-[hsl(var(--risk-medium))] shrink-0 mt-0.5" />;
-    case "not_verified": return <HelpCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />;
+    case "review": return <AlertTriangle className="h-4 w-4 text-[hsl(var(--risk-high))] shrink-0 mt-0.5" />;
+    case "not_verified": return <HelpCircle className="h-4 w-4 text-[hsl(var(--risk-medium))] shrink-0 mt-0.5" />;
     case "fail": return <XCircle className="h-4 w-4 text-[hsl(var(--risk-high))] shrink-0 mt-0.5" />;
   }
 };
@@ -16,8 +16,8 @@ const statusIcon = (status: RuleFinding["status"]) => {
 const statusBadgeClass = (status: RuleFinding["status"]) => {
   switch (status) {
     case "pass": return "compliance-badge-high";
-    case "review": return "compliance-badge-medium";
-    case "not_verified": return "bg-muted text-muted-foreground";
+    case "review": return "compliance-badge-low";
+    case "not_verified": return "compliance-badge-medium";
     case "fail": return "compliance-badge-low";
   }
 };

@@ -46,9 +46,8 @@ const ScanTodo = ({
               <span
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0",
-                  f.status === "fail" && "compliance-badge-low",
-                  f.status === "review" && "compliance-badge-medium",
-                  f.status === "not_verified" && "bg-muted text-muted-foreground"
+                  (f.status === "fail" || f.status === "review") && "compliance-badge-low",
+                  f.status === "not_verified" && "compliance-badge-medium"
                 )}
               >
                 {f.severity === "legal" ? "Legal · " : "Best practice · "}
