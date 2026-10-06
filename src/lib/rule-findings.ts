@@ -12,6 +12,16 @@ export const findingStatusLabel = (status: RuleFinding["status"]) => {
   }
 };
 
+// The three numbers in the checks summary. "Issues found" is everything the
+// label needs changing or evidence for (fail or review); "couldn't check" is
+// a rule the photos didn't let us assess, which still needs action before the
+// label can be relied on. Legal and best-practice findings both count.
+export const summarizeFindings = (findings: RuleFinding[]) => ({
+  issues: findings.filter((f) => f.status === "fail" || f.status === "review").length,
+  notChecked: findings.filter((f) => f.status === "not_verified").length,
+  passed: findings.filter((f) => f.status === "pass").length,
+});
+
 const MARKET_NAMES: Record<string, string> = { GB: "Great Britain", NI: "Northern Ireland", EU: "EU" };
 
 export const describeMarkets = (markets: string[]) =>
