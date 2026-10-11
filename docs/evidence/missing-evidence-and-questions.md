@@ -4,7 +4,7 @@ These notes support `technical-architecture-and-individual-contribution.md`. Ple
 
 ## A. Discrepancies to resolve first
 
-1. **Product domain.** You described the company as a *logistics/inventory* SaaS. The repository is a **cosmetics label-compliance** product (Labelring). It has no logistics or inventory features. The workspace "Products" and "Suppliers" pages are thin views over brand data, not inventory management. Is there a separate logistics/inventory product or repository? If so, it needs its own analysis. If not, the application wording should be changed to match the product.
+1. ~~**Product domain.**~~ **Resolved (11 Oct 2026):** you confirmed the product is Labelring, a cosmetics label-compliance tool, not a logistics/inventory product. Describe the company in the same terms throughout the rest of your application (personal statement, CV and recommendation letters), so it matches this document.
 2. **"Developed from scratch."** The history begins with a Lovable template (`732c726`). Lovable's bot then wrote 151 commits (Mar–Jul 2026), including the initial MVP and the April 2026 pivot to the Label Scanner. I suggest wording such as "conceived, directed and built using AI-assisted development tools".
 3. **Who is `sub4568`?** This GitHub account authored PRs #1–#7 (March 2026) using OpenAI Codex. Is it you on a second account, your co-founder, or a contractor?
 
