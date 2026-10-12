@@ -16,12 +16,12 @@
 
 ## 2. My individual role
 
-**What the record shows.** The GitHub account `adminlabelring-png` (my account) owns the repository, opened every PR from #8 to #77 and merged all of them. It also holds the production Supabase, Vercel and Cloudflare configuration. Most code was **written by AI coding tools under my direction**:
+**What the record shows.** The GitHub account `adminlabelring-png` (my account) owns the repository, opened every PR from #8 to #77 and merged all of them; my former account `sub4568` opened and merged PRs #1–#7. It also holds the production Supabase, Vercel and Cloudflare configuration. Most code was **written by AI coding tools under my direction**:
 
 | Contributor | Evidence | Scope |
 |---|---|---|
 | Lovable (`gpt-engineer-app[bot]`) | 151 commits, Mar–Jul 2026 | Initial UI scaffold and MVP screens, including the 3 Apr 2026 "Pivot to Label Scanner MVP" |
-| `sub4568` using OpenAI Codex | 13 commits, PRs #1–#7, Mar 2026 | Mock dashboard and UI refinements **[identity: requires confirmation]** |
+| Me, via my former personal account `sub4568`, using OpenAI Codex | 13 commits, PRs #1–#7, Mar 2026 | Mock dashboard and UI refinements; the code was Codex-generated (branches `codex/*`), and I prompted and merged it |
 | Claude Code (Anthropic) | 43 direct commits, plus the code in the squash-merged PRs #43–#77 (`Co-authored-by: Claude` trailers) | Most of the backend, rule engine, data pipeline and migrations |
 | Third-party services | — | Supabase (Postgres, Auth, Storage, Edge Functions), OpenRouter (Gemini Flash and Claude Sonnet models), Resend, Odoo CRM, Vercel / Cloudflare Pages |
 
@@ -91,7 +91,7 @@ Whether these are novel compared with commercial regulatory-technology products 
 - **Tests:** `npm test` gives 14 files and 101 tests, all passing (run 11 Oct 2026). The build and prerender pass.
 - **PRs:** #8, #9, #34, #36, #51, #53, #59, #62, #64, #66, #67, #69 (descriptions record the rationale and my reported test cases).
 - **Deployment:** Supabase function versions and migration history; Vercel preview comments on PRs.
-- **I must provide manually:** screenshots of a scan (partial-coverage and full-coverage cases), the admin Rulebook and Costs screens, and a print PDF; a short screen-recorded demo; the AI-session transcripts showing my prompts, reviews and debugging; the advisor/co-founder plan; and confirmation of my company role and of the co-founder's and `sub4568`'s contributions.
+- **I must provide manually:** screenshots of a scan (partial-coverage and full-coverage cases), the admin Rulebook and Costs screens, and a print PDF; a short screen-recorded demo; the AI-session transcripts showing my prompts, reviews and debugging; the advisor/co-founder plan; confirmation of my company role and of the co-founder's contribution; and evidence that `sub4568` is my former account (for example, a screenshot of its profile or verified email).
 
 ## 7. Conclusion
 

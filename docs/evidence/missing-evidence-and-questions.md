@@ -6,7 +6,7 @@ These notes support `technical-architecture-and-individual-contribution.md`. Ple
 
 1. ~~**Product domain.**~~ **Resolved (11 Oct 2026):** you confirmed the product is Labelring, a cosmetics label-compliance tool, not a logistics/inventory product. Describe the company in the same terms throughout the rest of your application (personal statement, CV and recommendation letters), so it matches this document.
 2. **"Developed from scratch."** The history begins with a Lovable template (`732c726`). Lovable's bot then wrote 151 commits (Mar–Jul 2026), including the initial MVP and the April 2026 pivot to the Label Scanner. I suggest wording such as "conceived, directed and built using AI-assisted development tools".
-3. **Who is `sub4568`?** This GitHub account authored PRs #1–#7 (March 2026) using OpenAI Codex. Is it you on a second account, your co-founder, or a contractor?
+3. ~~**Who is `sub4568`?**~~ **Resolved (12 Oct 2026):** it is your former personal GitHub account, so PRs #1–#7 (March 2026) are your work, generated with OpenAI Codex. Assessors can't see the link between the two accounts, so include a screenshot of the `sub4568` profile or settings showing it is yours, or a one-line signed statement.
 
 ## B. Facts the repository cannot establish
 
