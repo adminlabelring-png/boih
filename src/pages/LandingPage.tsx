@@ -5,57 +5,49 @@ import {
   Sparkles,
   CheckCircle2,
   ShieldCheck,
-  Barcode,
-  Gauge,
+  ScanLine,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ComparisonTable from "@/components/landing/ComparisonTable";
 import RegulationCards from "@/components/landing/RegulationCards";
 import EarlyAccessForm from "@/components/landing/EarlyAccessForm";
 import LandingFooter from "@/components/landing/LandingFooter";
+import HeroCheckCard from "@/components/landing/HeroCheckCard";
+import Framework from "@/components/landing/Framework";
+import ComplianceSources from "@/components/landing/ComplianceSources";
 import { useSeo } from "@/hooks/use-seo";
 
-const audiences = [
-  {
-    emoji: "🍱",
-    title: "Food & FMCG",
-    body: "Allergen declarations, ingredient lists, nutritional data, HFSS classification, all managed in one place.",
-  },
-  {
-    emoji: "💄",
-    title: "Cosmetics & Wellness",
-    body: "UK Cosmetics Regulation compliance, responsible person details, CMR substance checks, and claims verification.",
-  },
-  {
-    emoji: "📦",
-    title: "Importers & Distributors",
-    body: "Selling into multiple regulatory environments simultaneously? Labelring maintains one verified product record that adapts per market.",
-  },
+const cosmeticsChecks = [
+  "UK Cosmetics Regulation & EU rules",
+  "Responsible Person & CMR substance checks",
+  "Fragrance allergens & claims",
+  "One product record, a version per market (GB, NI, EU)",
 ];
 
 const howItWorks = [
   {
-    icon: Barcode,
-    title: "1. Add your product",
-    body: "Scan a barcode or upload existing artwork. We pull known data from GS1 and Open Food Facts.",
+    icon: ScanLine,
+    title: "1. Scan or start a label",
+    body: "Upload photos of your current label, or start a new one in the label builder.",
   },
   {
     icon: ShieldCheck,
-    title: "2. Fill the gaps",
-    body: "The dashboard shows exactly which fields are missing for your category and market.",
+    title: "2. See what needs action",
+    body: "Every check is marked: action needed, couldn't check, or meets the rule, with the fix and the legal source.",
   },
   {
-    icon: Gauge,
-    title: "3. Publish & export",
-    body: "Get a live compliance score, print-ready label, and one-click DPP export.",
+    icon: Printer,
+    title: "3. Print with confidence",
+    body: "Get a print-ready label for each market, then hand it to your Responsible Person for sign-off.",
   },
 ];
 
 const LandingPage = () => {
   useSeo({
-    title: "Labelring | Product Label Compliance",
+    title: "Labelring | Cosmetics Label Compliance",
     description:
-      "AI-powered product label compliance software for UK food, cosmetic, and consumer brands. Check labels against UK labelling regulations and prepare for the EU Digital Product Passport.",
+      "Check your cosmetics label against UK and EU cosmetics rules, or generate a new one: Responsible Person, ingredients, fragrance allergens, CMR substances and warnings.",
     path: "/",
   });
 
@@ -77,42 +69,36 @@ const LandingPage = () => {
             className="lg:col-span-3 space-y-6"
           >
             <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border bg-background text-muted-foreground">
-              <Sparkles className="h-3 w-3" /> Early access · UK 2026 regulation ready
+              <Sparkles className="h-3 w-3" /> Early access · UK & EU cosmetics 2026
             </span>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.05]">
-              Check Your Product Label Compliance
+              Check your cosmetics label before the regulator does
             </h1>
             <p className="text-lg text-muted-foreground max-w-xl leading-relaxed">
-              Scan your label, identify potential compliance issues, and make better-informed product labelling decisions.
+              Scan your label or generate a new one, checked against UK and EU cosmetics rules, in minutes.
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Link to="/generate">
+              <Link to="/scan">
                 <Button size="lg" className="gap-2">
-                  Create your digital label
+                  Scan my label
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/scan">
+              <Link to="/generate">
                 <Button variant="outline" size="lg" className="gap-2">
-                  Check My Label
+                  Generate a label
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <a href="#early-access">
-                <Button variant="outline" size="lg" className="gap-2">
-                  Check Your Compliance
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </a>
-              <a href="#how-it-works">
                 <Button variant="ghost" size="lg" className="gap-1">
-                  See how it works <ArrowRight className="h-4 w-4" />
+                  Request early access <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
 
             <div className="flex flex-wrap gap-4 pt-2 text-xs text-muted-foreground">
-              {["UK FIC ready", "EU DPP export", "EPR recycling labels", "HFSS classification"].map((t) => (
+              {["UK Cosmetics Regulation", "EU allergen update", "Responsible Person checks", "CMR & restricted substances"].map((t) => (
                 <span key={t} className="inline-flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--risk-low))]" /> {t}
                 </span>
@@ -127,43 +113,7 @@ const LandingPage = () => {
             transition={{ delay: 0.1 }}
             className="lg:col-span-2"
           >
-            <div className="rounded-xl border bg-background/80 backdrop-blur p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-medium text-muted-foreground">Live compliance score</div>
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-muted">SKU · 4820</span>
-              </div>
-              <div className="flex items-end gap-3">
-                <div className="text-4xl font-semibold tabular-nums">86<span className="text-lg text-muted-foreground">%</span></div>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-[hsl(var(--risk-low-bg))] text-[hsl(var(--risk-low))] font-medium mb-1.5">
-                  Retail ready
-                </span>
-              </div>
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-[hsl(var(--risk-low))]" style={{ width: "86%" }} />
-              </div>
-              <div className="space-y-2 pt-1">
-                {[
-                  { label: "Ingredients & allergens", ok: true },
-                  { label: "Nutrition declaration", ok: true },
-                  { label: "Net quantity (PRMA 2025)", ok: true },
-                  { label: "EPR recycling label", ok: false },
-                  { label: "DPP data record", ok: false },
-                ].map((r) => (
-                  <div key={r.label} className="flex items-center justify-between text-xs">
-                    <span className="text-foreground/80">{r.label}</span>
-                    <span
-                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
-                        r.ok
-                          ? "bg-[hsl(var(--risk-low-bg))] text-[hsl(var(--risk-low))]"
-                          : "bg-[hsl(var(--risk-medium-bg))] text-[hsl(var(--risk-medium))]"
-                      }`}
-                    >
-                      {r.ok ? "Pass" : "Action"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <HeroCheckCard />
           </motion.div>
         </div>
       </section>
@@ -172,7 +122,7 @@ const LandingPage = () => {
       <section className="space-y-5">
         <div className="max-w-2xl">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Right now, UK labelling is broken. And it's getting more expensive to get wrong.
+            Cosmetics labelling is getting harder, and more expensive to get wrong.
           </h2>
         </div>
         <ComparisonTable />
@@ -182,24 +132,44 @@ const LandingPage = () => {
       <section className="space-y-5">
         <div className="max-w-2xl">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Built for regulated consumer brands.
+            Built for cosmetics brands, with FMCG on the way.
           </h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {audiences.map((a, i) => (
-            <motion.div
-              key={a.title}
-              initial={{ opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-              className="rounded-xl border bg-card p-6 space-y-3"
-            >
-              <div className="text-3xl">{a.emoji}</div>
-              <h3 className="font-semibold text-base">{a.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{a.body}</p>
-            </motion.div>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="rounded-xl border-2 border-primary bg-primary/5 p-6 space-y-4"
+          >
+            <div className="text-3xl">💄</div>
+            <h3 className="font-semibold text-base">Cosmetics & Wellness</h3>
+            <ul className="space-y-2">
+              {cosmeticsChecks.map((c) => (
+                <li key={c} className="flex items-start gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-primary" /> {c}
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Skincare, haircare, makeup, fragrance and solid-format products. Exporting to the EU? Each market gets its
+              own version with the right Responsible Person and language.
+            </p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.05 }}
+            className="rounded-xl border border-dashed bg-muted/30 p-6 space-y-4 text-muted-foreground"
+          >
+            <span className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border bg-background">Coming soon</span>
+            <h3 className="font-semibold text-base text-foreground/80">Food & FMCG</h3>
+            <p className="text-sm leading-relaxed">Allergens, nutrition, HFSS, EPR recycling labels.</p>
+            <a href="#early-access" className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:underline underline-offset-2">
+              Join early access to be first in line <ArrowRight className="h-3.5 w-3.5" />
+            </a>
+          </motion.div>
         </div>
       </section>
 
@@ -207,7 +177,7 @@ const LandingPage = () => {
       <section className="space-y-5">
         <div className="max-w-2xl">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Four regulatory waves. One platform built for all of them.
+            The regulatory changes cosmetics brands face.
           </h2>
         </div>
         <RegulationCards />
@@ -238,6 +208,22 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* FRAMEWORK */}
+      <section className="space-y-5">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Where Labelring sits</h2>
+        </div>
+        <Framework />
+      </section>
+
+      {/* SOURCES */}
+      <section className="space-y-5">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Where our compliance info comes from</h2>
+        </div>
+        <ComplianceSources />
+      </section>
+
       {/* EARLY ACCESS */}
       <section id="early-access" className="space-y-5">
         <div className="max-w-2xl">
@@ -245,7 +231,7 @@ const LandingPage = () => {
             Join the brands getting compliant before the deadline.
           </h2>
           <p className="text-muted-foreground mt-3 leading-relaxed">
-            We're working with a small group of UK food, cosmetics, and import brands ahead of public launch. Early access includes free onboarding support and a compliance audit of your existing labels.
+            We're working with a small group of UK cosmetics brands ahead of public launch. Early access includes free onboarding support and a compliance audit of your existing labels.
           </p>
         </div>
         <EarlyAccessForm />
