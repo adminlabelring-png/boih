@@ -1,30 +1,32 @@
-import { Scale, Recycle, QrCode, AlertTriangle } from "lucide-react";
+import { FlaskConical, ListChecks, UserCheck, QrCode, Recycle } from "lucide-react";
 import { motion } from "framer-motion";
 
+// Cosmetics changes first; the food-and-packaging ones (EPR, HFSS) sit in a
+// greyed "Coming soon" card so they don't read as live for cosmetics brands.
 const regulations = [
   {
-    icon: Scale,
-    pill: "In force Jan 2026",
-    title: "Product Regulation & Metrology Act 2025",
-    body: "Correct weights, volumes, and counts are now a legal requirement on all packaged goods. Labelring flags non-compliant fields before your label goes live.",
+    icon: FlaskConical,
+    pill: "Phasing in 2025 to 2026",
+    title: "Formaldehyde & CMR substance bans",
+    body: "New restrictions on CMR substances and formaldehyde-releasing preservatives are taking effect. Labelring checks your ingredient list against the banned and restricted substance annexes and flags affected SKUs.",
   },
   {
-    icon: Recycle,
-    pill: "From March 2026",
-    title: "Extended Producer Responsibility (EPR)",
-    body: "All packaging must carry a 'recycle' or 'do not recycle' label. 71% of producers know this is coming. Only 57% know how to apply it. Labelring tells you exactly which label your packaging needs.",
+    icon: ListChecks,
+    pill: "From July 2026",
+    title: "EU allergen labelling update",
+    body: "The EU's expanded fragrance allergen list means more ingredients must be declared on products sold in the EU and Northern Ireland. Labelring checks your ingredient list against the new requirements.",
+  },
+  {
+    icon: UserCheck,
+    pill: "In force",
+    title: "UK Cosmetics Regulation & Responsible Person",
+    body: "Every product needs a named Responsible Person and compliant labelling. Labelring checks the fields that matter: Responsible Person, ingredients, warnings, batch, date marking and nominal content.",
   },
   {
     icon: QrCode,
     pill: "Phasing in 2026 to 2030",
-    title: "EU Digital Product Passport (DPP)",
-    body: "Brands selling into the EU will need a machine-readable product record linked to the EU registry. Labelring is the infrastructure layer that makes this possible, and exportable in one click.",
-  },
-  {
-    icon: AlertTriangle,
-    pill: "Effective 2026",
-    title: "HFSS & Cosmetics Regulation Changes",
-    body: "HFSS product classification, CMR substance bans, and formaldehyde labelling requirements all take effect in 2026. Labelring tracks these automatically and flags affected SKUs.",
+    title: "EU Digital Product Passport",
+    body: "Exporting to the EU will require a machine-readable product record. Labelring keeps your product data in one place, ready for a passport when your category is called up.",
   },
 ];
 
@@ -51,6 +53,24 @@ const RegulationCards = () => (
         <p className="text-sm text-muted-foreground leading-relaxed">{r.body}</p>
       </motion.div>
     ))}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: regulations.length * 0.05 }}
+      className="md:col-span-2 rounded-xl border border-dashed bg-muted/30 p-6 space-y-2 text-muted-foreground"
+    >
+      <div className="flex items-center justify-between">
+        <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
+          <Recycle className="h-4 w-4" />
+        </div>
+        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full border bg-background">Coming soon</span>
+      </div>
+      <h3 className="font-semibold text-base">EPR & HFSS (Food & FMCG)</h3>
+      <p className="text-sm leading-relaxed">
+        Recycling labels and HFSS classification for food and packaged goods. Not part of the cosmetics checks yet.
+      </p>
+    </motion.div>
   </div>
 );
 
