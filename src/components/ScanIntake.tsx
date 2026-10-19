@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { Globe, Languages, Package, Shapes, UserRound } from "lucide-react";
-import type { Market, PackFormat, ProductType, Role, ScanOptions } from "@/lib/scan-context";
+import { Droplets, Globe, Languages, Package, Shapes, UserRound } from "lucide-react";
+import type { Exposure, Market, PackFormat, ProductType, Role, ScanOptions } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 
 const MARKETS: { value: Market; label: string; hint: string }[] = [
@@ -32,6 +32,15 @@ export const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string; hint: st
   { value: "lip_oral", label: "Lip or oral", hint: "Lipstick, lip balm, lip gloss, toothpaste, mouthwash" },
   { value: "fragrance", label: "Fragrance", hint: "Perfume, eau de toilette, body mist" },
 ];
+
+// Whether it's washed off after use. Eye, lip and fragrance products stay
+// on, so the question is only asked for the others.
+export const EXPOSURE_OPTIONS: { value: Exposure; label: string; hint: string }[] = [
+  { value: "leave_on", label: "Leave-on", hint: "Stays on the skin or hair: creams, serums, lotions, deodorants" },
+  { value: "rinse_off", label: "Rinse-off", hint: "Washed off after use: shampoos, cleansers, shower gels, soap bars" },
+];
+
+const LEAVE_ON_TYPES: (ProductType | null)[] = ["eye_area", "lip_oral", "fragrance"];
 
 // EU countries whose language rules the rulebook covers.
 export const EU_COUNTRY_OPTIONS: { value: string; label: string; hint: string }[] = [
@@ -146,7 +155,11 @@ const ScanIntake = ({ options, setOptions }: { options: ScanOptions; setOptions:
               key={t.value}
               type="button"
               aria-pressed={options.productType === t.value}
-              onClick={() => setOptions({ ...options, productType: options.productType === t.value ? null : t.value })}
+              onClick={() => {
+                const productType = options.productType === t.value ? null : t.value;
+                // Eye, lip and fragrance products are leave-on by nature.
+                setOptions({ ...options, productType, exposure: LEAVE_ON_TYPES.includes(productType) ? null : options.exposure });
+              }}
               className={chip(options.productType === t.value)}
               title={t.hint}
             >
@@ -156,6 +169,29 @@ const ScanIntake = ({ options, setOptions }: { options: ScanOptions; setOptions:
         </div>
         <p className="mt-1.5 text-xs text-muted-foreground">If you skip this, we'll work it out from the label.</p>
       </div>
+      {!LEAVE_ON_TYPES.includes(options.productType) && (
+        <div>
+          <div className="flex items-center gap-2">
+            <Droplets className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium">Is it washed off after use? <span className="text-muted-foreground font-normal">(optional)</span></p>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Leave-on or rinse-off">
+            {EXPOSURE_OPTIONS.map((e) => (
+              <button
+                key={e.value}
+                type="button"
+                aria-pressed={options.exposure === e.value}
+                onClick={() => setOptions({ ...options, exposure: options.exposure === e.value ? null : e.value })}
+                className={chip(options.exposure === e.value)}
+                title={e.hint}
+              >
+                {e.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">Some ingredients are only allowed in rinse-off products.</p>
+        </div>
+      )}
       <div>
         <div className="flex items-center gap-2">
           <Package className="h-4 w-4 text-muted-foreground" />

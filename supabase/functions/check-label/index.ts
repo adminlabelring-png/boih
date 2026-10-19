@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
       pack: isPackFormat(pack) ? pack : null,
       productType,
       productTypeSource: productType ? "chosen" : null,
+      exposure,
       countries,
       checkedAt: new Date().toISOString(),
     };

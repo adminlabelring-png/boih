@@ -285,7 +285,8 @@ async function applyRulebook(
   pack: unknown,
   countries: string[],
   coverageComplete: boolean,
-  chosenType: unknown
+  chosenType: unknown,
+  rawExposure: unknown
 ) {
   const scope = rulebookScopeForCategory(parsed.category);
   if (!scope || !Array.isArray(parsed.fields)) return { findings: [], rulebook: null };
@@ -307,6 +308,7 @@ async function applyRulebook(
       ? detectedType
       : null;
   const productTypeSource = isProductType(chosenType) ? "chosen" : productType ? "detected" : null;
+  const exposure = rawExposure === "leave_on" || rawExposure === "rinse_off" ? rawExposure : null;
 
   const findings = evaluateRules(
     {
@@ -322,6 +324,7 @@ async function applyRulebook(
       pack: isPackFormat(pack) ? pack : null,
       countries,
       productType,
+      exposure,
     },
     rulebook
   );
@@ -342,6 +345,7 @@ async function applyRulebook(
     pack: isPackFormat(pack) ? pack : null,
     productType,
     productTypeSource,
+    exposure,
     countries,
     checkedAt: new Date().toISOString(),
   };
@@ -354,7 +358,7 @@ serve(async (req) => {
   }
 
   try {
-    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role, pack, productType, countries: rawCountries, signupId } = await req.json();
+    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role, pack, productType, exposure, countries: rawCountries, signupId } = await req.json();
     const countries: string[] = Array.isArray(rawCountries)
       ? [...new Set(rawCountries.filter((c): c is string => typeof c === "string" && /^[A-Z]{2}$/.test(c)))]
       : [];
@@ -486,7 +490,7 @@ serve(async (req) => {
       parsed.fields = parsed.fields.filter((f: { label?: string }) => f?.label !== "Allergens");
     }
 
-    const { findings, rulebook } = await applyRulebook(parsed, markets, role, pack, countries, coverageComplete, productType);
+    const { findings, rulebook } = await applyRulebook(parsed, markets, role, pack, countries, coverageComplete, productType, exposure);
     parsed.findings = findings;
     parsed.rulebook = rulebook;
 

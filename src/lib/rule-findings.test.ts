@@ -63,5 +63,9 @@ describe("rulebookStampText", () => {
       "Checked as: lip or oral product (read from the label; if that's wrong, scan again and choose the product type)."
     );
     expect(rulebookStampText(stamp, [])).not.toContain("Checked as");
+    expect(rulebookStampText({ ...stamp, productType: "liquid_cream", productTypeSource: "chosen", exposure: "rinse_off" }, [])).toContain(
+      "Checked as: liquid or cream, rinse-off."
+    );
+    expect(rulebookStampText({ ...stamp, exposure: "leave_on" }, [])).toContain("Checked as: leave-on.");
   });
 });

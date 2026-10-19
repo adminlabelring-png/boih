@@ -93,6 +93,17 @@ describe("scanToLabel", () => {
     expect(food.fields.bestBefore).toBe("06/2027");
   });
 
+  it("carries the scan's leave-on / rinse-off answer without counting it as read", () => {
+    const h = scanToLabel(
+      result({
+        fields: [f("Product Name", "Shampoo Bar")],
+        rulebook: { scope: "cosmetics", version: "2026.2", status: "draft", markets: ["GB"], exposure: "rinse_off", checkedAt: "2026-10-19T10:00:00Z" },
+      })
+    );
+    expect(h.fields.cosmeticProductType).toBe("rinse_off");
+    expect(h.prefilled).not.toContain("cosmeticProductType");
+  });
+
   it("maps unknown categories to Other", () => {
     expect(scanToLabel(result({ category: "Toy" })).fields.category).toBe("Other");
   });

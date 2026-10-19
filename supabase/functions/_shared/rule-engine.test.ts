@@ -387,3 +387,67 @@ describe("product types", () => {
     expect(run(label("Alcohol Denat., Parfum"), "fragrance").allergens.reason).toContain("Perfumes are leave-on");
   });
 });
+
+describe("required warnings", () => {
+  const warned: Rulebook = {
+    scope: "cosmetics",
+    version: "test.warnings",
+    status: "draft",
+    rules: [rule({ rule_key: "warnings", check_type: "required_warnings", field: "Ingredients", params: { warnings_field: "Warnings" } })],
+    substances: [
+      { ...substance("Silver Nitrate", "restricted"), label_warnings: "Contains silver nitrate Rinse eyes immediately if product comes into contact with them" },
+      { ...substance("Thimerosal", "preservative", ["Thiomersal"]), label_warnings: "Contains Thiomersal" },
+      {
+        ...substance("Sodium Fluoride", "restricted"),
+        label_warnings:
+          "Contains sodium fluoride. For any toothpaste with compounds containing fluorine in a concentration of 0,1 to 0,15 % calculated as F the following labelling is obligatory: ‘Children of 6 years and younger: Use a pea sized amount’.",
+      },
+      { ...substance("Resorcinol", "restricted"), label_warnings: "(a) To be printed on the label: The mixing ratio. Read and follow instructions." },
+    ],
+  };
+  const run = (ingredients: string, warnings: string | null, status: ExtractedField["status"] = "verified", markets: ("GB" | "EU")[] = ["GB"]) =>
+    evaluateRules(
+      {
+        fields: [field("Ingredients", ingredients), field("Warnings", warnings, status), field("Label Languages", "de")],
+        category: "Cosmetic",
+        markets,
+      },
+      warned
+    )[0];
+
+  it("passes when nothing needs a warning", () => {
+    expect(run("Aqua, Glycerin", "Avoid contact with eyes.").status).toBe("pass");
+  });
+
+  it("passes when the required wording is on the label, in any order or case", () => {
+    expect(run("Aqua, Silver Nitrate", "Rinse eyes immediately if the product comes into contact with them. Contains silver nitrate.").status).toBe("pass");
+    // Any official name of the ingredient will do.
+    expect(run("Aqua, Thimerosal", "Contains thimerosal.").status).toBe("pass");
+  });
+
+  it("fails when required wording is missing", () => {
+    const f = run("Aqua, Silver Nitrate", "Contains silver nitrate.");
+    expect(f.status).toBe("fail");
+    expect(f.reason).toContain("Rinse eyes immediately");
+  });
+
+  it("fails when the warnings are confirmed absent", () => {
+    expect(run("Aqua, Thimerosal", null, "missing").status).toBe("fail");
+  });
+
+  it("checks the unconditional part and lists the conditional part", () => {
+    expect(run("Sodium Fluoride, Aqua", "Do not swallow.").status).toBe("fail");
+    const f = run("Sodium Fluoride, Aqua", "Contains sodium fluoride.");
+    expect(f.status).toBe("review");
+    expect(f.reason).toContain("depends on the product type or concentration");
+  });
+
+  it("only asks for wording that depends on the product", () => {
+    expect(run("Aqua, Resorcinol", "Keep out of reach of children.").status).toBe("review");
+  });
+
+  it("asks rather than fails when the warnings couldn't be seen, or for an EU-only label in another language", () => {
+    expect(run("Aqua, Thimerosal", null, "not_verified").status).toBe("review");
+    expect(run("Aqua, Thimerosal", "Enthält Thiomersal.", "verified", ["EU"]).status).toBe("review");
+  });
+});

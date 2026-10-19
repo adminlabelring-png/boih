@@ -38,6 +38,7 @@ export type CheckType =
   | "language"
   | "claims"
   | "warning_text"
+  | "required_warnings"
   | "advisory";
 
 export interface RuleSource {
@@ -132,6 +133,8 @@ export interface RulebookStamp {
   // or it was read off the pack.
   productType?: ProductType | null;
   productTypeSource?: "chosen" | "detected" | null;
+  // Leave-on or rinse-off, when the brand said.
+  exposure?: Exposure | null;
   // EU countries it was checked for (language rules).
   countries?: string[];
   checkedAt: string;
@@ -285,6 +288,10 @@ interface CheckContext {
   countries: string[];
   productType: ProductType | null;
   exposure: Exposure | null;
+  pack: PackFormat | null;
+  // Every field read off the pack, for checks that compare two (e.g. an
+  // ingredient that needs a warning, and the warnings).
+  fields: Map<string, ExtractedField>;
 }
 
 const officialNames = (s: Substance) => [s.inci_name, ...s.synonyms];
@@ -315,6 +322,69 @@ const CI_NUMBER = /\bC\.?\s?I\.?\s?(\d{5})\b/gi;
 
 const inMarkets = (itemMarkets: Market[], markets: Market[]) =>
   itemMarkets.some((m) => markets.includes(m));
+
+// ------------------------------------------------------------------
+// Required label warnings (Annexes III-VI, "wording of conditions of use
+// and warnings")
+// ------------------------------------------------------------------
+
+const normalise = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[‘’“”"']/g, "")
+    .replace(/[^a-z0-9%]+/g, " ")
+    .trim();
+
+const WARNING_STOPWORDS = new Set([
+  "a", "an", "the", "of", "and", "or", "to", "with", "in", "on", "for", "is", "be", "it", "this", "them", "any", "as", "by", "at", "your",
+]);
+
+const significantWords = (text: string) =>
+  normalise(text)
+    .split(" ")
+    .filter((w) => w.length > 1 && !WARNING_STOPWORDS.has(w));
+
+// Wording that only applies to some products or concentrations: "(a) ...
+// (b) ...", "the mixing ratio", "for any toothpaste with ... 0,1 to
+// 0,15 %". Those can't be checked word for word from the label.
+const CONDITIONAL_SENTENCE = /%|\bppm\b|concentration|\bunless\b|\bfor any\b|\bexceeds?\b|\bwhere\b/i;
+
+// Splits an entry's warning into the sentences every label must carry
+// (up to the first conditional one) and whether conditional wording
+// follows.
+export const splitRequiredWarning = (text: string): { required: string[]; conditional: boolean } => {
+  if (/\([a-z]\)/i.test(text) || /mixing ratio/i.test(text)) return { required: [], conditional: true };
+  const sentences = text.split(/(?<=[.;])\s+/).map((x) => x.trim()).filter(Boolean);
+  const required: string[] = [];
+  for (const sentence of sentences) {
+    if (CONDITIONAL_SENTENCE.test(sentence)) return { required, conditional: true };
+    required.push(sentence.replace(/[.;]$/, ""));
+  }
+  return { required, conditional: false };
+};
+
+// Whether the label carries a required warning. Word order and punctuation
+// don't matter; the ingredient may be named by any of its official names
+// ("Contains Thimerosal" for "Contains Thiomersal").
+export const labelHasWarning = (required: string, label: string, s: Pick<Substance, "inci_name" | "synonyms">): boolean => {
+  let text = ` ${normalise(required)} `;
+  let needsName = false;
+  for (const name of officialNames(s as Substance)) {
+    const n = normalise(name);
+    if (n.length >= 3 && text.includes(` ${n} `)) {
+      text = text.replace(` ${n} `, " ");
+      needsName = true;
+    }
+  }
+  const labelNorm = ` ${normalise(label)} `;
+  if (needsName && !officialNames(s as Substance).some((n) => normalise(n).length >= 3 && labelNorm.includes(` ${normalise(n)} `))) {
+    return false;
+  }
+  const words = significantWords(text);
+  if (!words.length) return true;
+  const labelWords = new Set(significantWords(label));
+  return words.filter((w) => labelWords.has(w)).length / words.length >= 0.8;
+};
 
 const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
   present: ({ value }) => ({ status: "pass", reason: `Found: ${value}` }),
@@ -569,6 +639,77 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
       : { status: "review", reason: rule.explanation };
   },
 
+  // An ingredient whose annex entry sets out wording for the label (e.g.
+  // "Contains sodium fluoride", "Rinse eyes immediately if product comes
+  // into contact with them"): the wording must be on the label. Wording
+  // that depends on the product type or concentration is listed to check.
+  required_warnings: ({ rule, value, markets, substances, fields, pack }) => {
+    const needing = substances.filter(
+      (s) =>
+        s.label_warnings &&
+        s.list_type !== "prohibited" &&
+        s.list_type !== "fragrance_allergen" &&
+        inMarkets(s.markets, markets) &&
+        namedIn(value, s)
+    );
+    if (!needing.length) {
+      return { status: "pass", reason: "No ingredients that need a specific warning on the label." };
+    }
+
+    const warnings = fields.get((rule.params.warnings_field as string | undefined) ?? "Warnings");
+    const visible = !!warnings && warnings.status !== "not_verified" && (warnings.status === "missing" || !!warnings.value);
+    const labelText = warnings?.value ?? "";
+
+    const missing: string[] = [];
+    const conditional: string[] = [];
+    const found: string[] = [];
+    for (const s of needing) {
+      const name = nameOnLabel(value, s);
+      const { required, conditional: hasConditional } = splitRequiredWarning(s.label_warnings!);
+      for (const sentence of required) {
+        if (visible && labelHasWarning(sentence, labelText, s)) found.push(`"${clip(sentence, 160)}"`);
+        else missing.push(`${name}: "${clip(sentence, 200)}"`);
+      }
+      if (hasConditional) conditional.push(`${name}${where(s)}: ${clip(s.label_warnings!, 400)}`);
+    }
+    const unique = (xs: string[]) => [...new Set(xs)];
+    const alsoCheck = conditional.length
+      ? ` Also check the wording that depends on the product type or concentration: ${unique(conditional).join(" ")}`
+      : "";
+
+    if (!visible) {
+      return {
+        status: "review",
+        reason: `These ingredients need specific warnings on the label, but the warnings weren't visible, so they couldn't be checked: ${unique(
+          [...missing, ...conditional]
+        ).join("; ")}.`,
+      };
+    }
+    if (missing.length) {
+      // GB and NI labels must be in English; an EU-only label in another
+      // language is compared with the English wording, so it only asks.
+      const languages = (fields.get("Label Languages")?.value ?? "").toLowerCase();
+      const english = markets.includes("GB") || markets.includes("NI") || /\ben\b/.test(languages);
+      const symbols = (fields.get("Pack Symbols")?.value ?? "").toLowerCase();
+      const leaflet = !!pack && ["leaflet", "small", "sample"].includes(pack) && symbols.includes("hand_in_book");
+      return {
+        status: english && !leaflet ? "fail" : "review",
+        reason:
+          `Required warning not found on the label: ${unique(missing).join("; ")}.` +
+          (!english ? " Compared with the English wording: check it appears in the label's language." : "") +
+          (leaflet ? " The pack shows the hand-in-book symbol: fine if it's on the enclosed leaflet." : "") +
+          alsoCheck,
+      };
+    }
+    if (conditional.length) {
+      return {
+        status: "review",
+        reason: `${found.length ? `Required warnings found (${unique(found).join(", ")}).` : ""}${alsoCheck}`.trim(),
+      };
+    }
+    return { status: "pass", reason: `Required warnings found: ${unique(found).join(", ")}.` };
+  },
+
   advisory: ({ rule, value }) => {
     const triggers = rule.params.only_if_any as string[] | undefined;
     if (triggers && value && !triggers.some((t) => value.toLowerCase().includes(t.toLowerCase()))) {
@@ -629,7 +770,7 @@ const evaluateRule = (
 
   // Advisories don't need the field to be readable.
   if (rule.check_type === "advisory") {
-    const outcome = checks.advisory({ rule, value, markets, role, substances, countries, productType, exposure });
+    const outcome = checks.advisory({ rule, value, markets, role, substances, countries, productType, exposure, pack, fields: fieldsByLabel });
     return outcome ? finding(outcome.status, outcome.reason, rule.fix_hint) : null;
   }
 
@@ -642,6 +783,8 @@ const evaluateRule = (
   }
 
   if (field.status === "missing") {
+    // No ingredient list: the ingredient-list rule already reports that.
+    if (rule.check_type === "required_warnings") return null;
     // Some fields are optional by nature (e.g. claims): absent is fine.
     if (rule.params.absent_ok) {
       return finding("pass", (rule.params.absent_note as string) ?? "None found.", null);
@@ -684,7 +827,18 @@ const evaluateRule = (
     return finding("fail", `Not found on the pack. ${rule.explanation}`, rule.fix_hint);
   }
 
-  const outcome = checks[rule.check_type]({ rule, value, markets, role, substances, countries, productType, exposure });
+  const outcome = checks[rule.check_type]({
+    rule,
+    value,
+    markets,
+    role,
+    substances,
+    countries,
+    productType,
+    exposure,
+    pack,
+    fields: fieldsByLabel,
+  });
   if (!outcome) return null;
 
   if (field.status === "low_confidence") {

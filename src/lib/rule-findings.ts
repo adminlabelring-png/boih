@@ -34,11 +34,14 @@ export const describeMarkets = (markets: string[]) =>
 // and published yet.
 export const rulebookStampText = (rulebook: RulebookStamp, findings: RuleFinding[]) => {
   const date = new Date(rulebook.checkedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const exposure = rulebook.exposure === "rinse_off" ? "rinse-off" : rulebook.exposure === "leave_on" ? "leave-on" : null;
   const type = rulebook.productType
-    ? ` Checked as: ${PRODUCT_TYPE_LABELS[rulebook.productType].toLowerCase()}${
+    ? ` Checked as: ${PRODUCT_TYPE_LABELS[rulebook.productType].toLowerCase()}${exposure ? `, ${exposure}` : ""}${
         rulebook.productTypeSource === "detected" ? " (read from the label; if that's wrong, scan again and choose the product type)" : ""
       }.`
-    : "";
+    : exposure
+      ? ` Checked as: ${exposure}.`
+      : "";
   const base = `Checked against Labelring ${rulebook.scope} rulebook v${rulebook.version} for ${describeMarkets(rulebook.markets)} on ${date}.${type}`;
   const provisional = rulebook.status !== "published" || findings.some((f) => !f.verified);
   return provisional
