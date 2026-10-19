@@ -8,6 +8,7 @@ import {
   evaluateRules,
   isMarket,
   isPackFormat,
+  isProductType,
   isRole,
   rulebookScopeForCategory,
   type Market,
@@ -28,7 +29,11 @@ const json = (body: unknown, status = 200) =>
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const { draft, category, markets: rawMarkets, role, pack, countries: rawCountries } = await req.json();
+    const { draft, category, markets: rawMarkets, role, pack, productType: rawType, countries: rawCountries } = await req.json();
+    const productType = isProductType(rawType) ? rawType : null;
+    // The builder's leave-on / rinse-off answer.
+    const exposureAnswer = (draft as LabelDraft | undefined)?.cosmeticProductType;
+    const exposure = exposureAnswer === "leave_on" || exposureAnswer === "rinse_off" ? exposureAnswer : null;
     const countries: string[] = Array.isArray(rawCountries)
       ? [...new Set(rawCountries.filter((c): c is string => typeof c === "string" && /^[A-Z]{2}$/.test(c)))]
       : [];
@@ -49,6 +54,8 @@ Deno.serve(async (req) => {
         role: isRole(role) ? role : null,
         pack: isPackFormat(pack) ? pack : null,
         countries,
+        productType,
+        exposure,
       },
       rulebook
     );
@@ -58,6 +65,8 @@ Deno.serve(async (req) => {
       status: rulebook.status,
       markets,
       pack: isPackFormat(pack) ? pack : null,
+      productType,
+      productTypeSource: productType ? "chosen" : null,
       countries,
       checkedAt: new Date().toISOString(),
     };

@@ -10,6 +10,8 @@ export interface LabelData {
   fields: LabelFields;
   markets: string[];
   pack: string | null;
+  // Kind of cosmetic (eye, lip, solid bar...), when one was chosen.
+  productType?: string | null;
   countries: string[];
   // Market versions' own wording, by version id (e.g. "EU-DE").
   variants?: Record<string, VariantText>;
@@ -56,6 +58,7 @@ export const normaliseLabelData = (raw: unknown): LabelData => {
     markets: Array.isArray(d.markets) ? d.markets : ["GB"],
     pack: typeof d.pack === "string" ? d.pack : null,
     countries: Array.isArray(d.countries) ? d.countries : [],
+    ...(typeof d.productType === "string" ? { productType: d.productType } : {}),
     ...(d.variants && typeof d.variants === "object" ? { variants: d.variants } : {}),
   };
 };
@@ -207,6 +210,7 @@ export const CHANGE_FIELD_NAMES: Record<string, string> = {
   instructionsForUse: "Instructions and precautions",
   markets: "Markets",
   pack: "Pack",
+  productType: "Product type",
   countries: "EU countries",
   variants: "Market versions",
 };

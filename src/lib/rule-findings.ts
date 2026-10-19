@@ -1,4 +1,5 @@
 import type { RuleFinding, RulebookStamp } from "./scan-context";
+import { PRODUCT_TYPE_LABELS } from "../../supabase/functions/_shared/rule-engine";
 
 // Shared between the results page and the PDF export so both describe
 // rule findings and the rulebook stamp in the same words. Colours follow
@@ -33,7 +34,12 @@ export const describeMarkets = (markets: string[]) =>
 // and published yet.
 export const rulebookStampText = (rulebook: RulebookStamp, findings: RuleFinding[]) => {
   const date = new Date(rulebook.checkedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-  const base = `Checked against Labelring ${rulebook.scope} rulebook v${rulebook.version} for ${describeMarkets(rulebook.markets)} on ${date}.`;
+  const type = rulebook.productType
+    ? ` Checked as: ${PRODUCT_TYPE_LABELS[rulebook.productType].toLowerCase()}${
+        rulebook.productTypeSource === "detected" ? " (read from the label; if that's wrong, scan again and choose the product type)" : ""
+      }.`
+    : "";
+  const base = `Checked against Labelring ${rulebook.scope} rulebook v${rulebook.version} for ${describeMarkets(rulebook.markets)} on ${date}.${type}`;
   const provisional = rulebook.status !== "published" || findings.some((f) => !f.verified);
   return provisional
     ? `${base} Provisional: this rulebook version hasn't yet been reviewed and published by the Labelring team.`

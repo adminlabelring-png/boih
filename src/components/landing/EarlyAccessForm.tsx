@@ -7,21 +7,21 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-import { CATEGORIES } from "@/lib/categories";
+import { LEAD_CATEGORIES } from "@/lib/categories";
+import LeadCategoryOptions from "@/components/LeadCategoryOptions";
 import { markLeadSubmitted } from "@/components/LeadCaptureDialog";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Please enter your name").max(100),
   email: z.string().trim().email("Please enter a valid email").max(255),
   company: z.string().trim().min(1, "Please enter your company").max(200),
-  product_category: z.enum(CATEGORIES as unknown as [string, ...string[]]),
+  product_category: z.enum(LEAD_CATEGORIES as unknown as [string, ...string[]]),
 });
 
 const EarlyAccessForm = () => {
@@ -138,11 +138,7 @@ const EarlyAccessForm = () => {
               <SelectValue placeholder="Select a category" />
             </SelectTrigger>
             <SelectContent>
-              {CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
+              <LeadCategoryOptions />
             </SelectContent>
           </Select>
           {errors.product_category && (

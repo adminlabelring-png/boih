@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import type { ScanChanges } from "./scan-diff";
 import { findAllergensInText, findFragranceAllergensInIngredients } from "./allergens";
-import type { Market, PackFormat, Role, RuleFinding, RulebookStamp } from "../../supabase/functions/_shared/rule-engine";
+import type { Market, PackFormat, ProductType, Role, RuleFinding, RulebookStamp } from "../../supabase/functions/_shared/rule-engine";
 
-export type { Market, PackFormat, Role, RuleFinding, RulebookStamp };
+export type { Market, PackFormat, ProductType, Role, RuleFinding, RulebookStamp };
 
 // Four-state field status, replacing a binary found/missing model:
 //   verified       — clearly visible, extracted with high confidence
@@ -72,6 +72,9 @@ export interface ScanOptions {
   role: Role | null;
   // What it's packed in: decides the Article 19 small-pack rules.
   pack: PackFormat | null;
+  // What kind of cosmetic it is; when not given, the scanner reads it off
+  // the pack.
+  productType: ProductType | null;
   // EU countries it's sold in (e.g. DE, FR): each sets the label language.
   countries: string[];
 }
@@ -92,6 +95,7 @@ const defaultOptions: ScanOptions = {
   markets: ["GB"],
   role: null,
   pack: null,
+  productType: null,
   countries: [],
 };
 

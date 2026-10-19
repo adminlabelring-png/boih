@@ -45,8 +45,9 @@ import { TRANSLATABLE, usesVariants, variantFields, variantsFor, type Variant, t
 import MarketVersions from "@/components/generator/MarketVersions";
 import RuleFindings from "@/components/RuleFindings";
 import { rulebookStampText, findingStatusLabel } from "@/lib/rule-findings";
-import type { Market, PackFormat } from "@/lib/scan-context";
-import { EU_COUNTRY_OPTIONS, PACK_OPTIONS } from "@/components/ScanIntake";
+import type { Market, PackFormat, ProductType } from "@/lib/scan-context";
+import { isProductType } from "../../supabase/functions/_shared/rule-engine";
+import { EU_COUNTRY_OPTIONS, PACK_OPTIONS, PRODUCT_TYPE_OPTIONS } from "@/components/ScanIntake";
 import { DRAFT_LABEL_DISCLAIMER } from "@/lib/disclaimer";
 import { supabase } from "@/integrations/supabase/client";
 import { getLeadId } from "@/lib/lead-tracker";
@@ -103,6 +104,9 @@ const GenerateLabelPage = () => {
   const [markets, setMarkets] = useState<Market[]>(() => scanHandoff?.rulebook?.markets ?? ["GB"]);
   // How it's packed (small-pack exemptions); optional.
   const [packFormat, setPackFormat] = useState<PackFormat | null>(() => scanHandoff?.rulebook?.pack ?? null);
+  // What kind of cosmetic it is (eye, lip, solid bar...): decides which
+  // annex conditions and type-specific rules apply; optional.
+  const [productType, setProductType] = useState<ProductType | null>(() => scanHandoff?.rulebook?.productType ?? null);
   // EU countries (language rules), when the EU is one of the markets.
   const [countries, setCountries] = useState<string[]>(() => scanHandoff?.rulebook?.countries ?? []);
   const euCountries = markets.includes("EU") ? countries : [];
@@ -146,6 +150,7 @@ const GenerateLabelPage = () => {
         setFields(emptyLabel);
         setMarkets(["GB"]);
         setPackFormat(null);
+        setProductType(null);
         setCountries([]);
         setVariantText({});
       }
@@ -168,6 +173,7 @@ const GenerateLabelPage = () => {
         setFields(data.fields);
         setMarkets(data.markets as Market[]);
         setPackFormat(data.pack as PackFormat | null);
+        setProductType(isProductType(data.productType) ? data.productType : null);
         setCountries(data.countries);
         setVariantText(data.variants ?? {});
         if (labelParam) {
@@ -254,7 +260,7 @@ const GenerateLabelPage = () => {
     }
     let cancelled = false;
     const t = setTimeout(() => {
-      checkDraft(fields, markets, packFormat, masterCountries)
+      checkDraft(fields, markets, packFormat, masterCountries, productType)
         .then((r) => !cancelled && setDraftCheck(r))
         .catch((e) => console.warn("rulebook check failed", e));
     }, 800);
@@ -263,7 +269,7 @@ const GenerateLabelPage = () => {
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(fields), pack, markets.join(","), packFormat, masterCountries.join(",")]);
+  }, [JSON.stringify(fields), pack, markets.join(","), packFormat, productType, masterCountries.join(",")]);
 
   // Each market version checked against its own market (and country).
   useEffect(() => {
@@ -275,7 +281,7 @@ const GenerateLabelPage = () => {
     const t = setTimeout(() => {
       Promise.all(
         variants.map((v) =>
-          checkDraft(variantFields(fields, v, variantText[v.id]), [v.market], packFormat, v.country ? [v.country] : [])
+          checkDraft(variantFields(fields, v, variantText[v.id]), [v.market], packFormat, v.country ? [v.country] : [], productType)
             .then((r) => [v.id, r] as const)
             .catch(() => [v.id, null] as const)
         )
@@ -286,7 +292,7 @@ const GenerateLabelPage = () => {
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(fields), JSON.stringify(variantText), variants.map((v) => v.id).join(","), packFormat, showVersions]);
+  }, [JSON.stringify(fields), JSON.stringify(variantText), variants.map((v) => v.id).join(","), packFormat, productType, showVersions]);
 
   const translateVariant = async (v: Variant) => {
     if (v.language === "en") return;
@@ -404,6 +410,7 @@ const GenerateLabelPage = () => {
           eu_responsible_person: fields.euResponsiblePerson || null,
           markets: pack === "cosmetic" ? markets : null,
           pack_format: pack === "cosmetic" ? packFormat : null,
+          product_type: pack === "cosmetic" ? productType : null,
           eu_countries: pack === "cosmetic" && euCountries.length ? euCountries : null,
           rulebook_version: rulebookFindings && draftCheck?.rulebook
             ? `${draftCheck.rulebook.scope} ${draftCheck.rulebook.version}`
@@ -1146,6 +1153,34 @@ const GenerateLabelPage = () => {
               )}
               {pack === "cosmetic" && (
                 <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">What kind of product? (optional)</Label>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Product type">
+                    {PRODUCT_TYPE_OPTIONS.map((t) => {
+                      const active = productType === t.value;
+                      return (
+                        <button
+                          key={t.value}
+                          type="button"
+                          aria-pressed={active}
+                          title={t.hint}
+                          onClick={() => setProductType(active ? null : t.value)}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                            active ? "border-primary bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-accent"
+                          )}
+                        >
+                          {t.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Some ingredients aren't allowed in eye or lip products, and bars, eye products and fragrances have their own checks.
+                  </p>
+                </div>
+              )}
+              {pack === "cosmetic" && (
+                <div className="space-y-1.5">
                   <Label className="text-xs font-medium">How is it packed? (optional)</Label>
                   <div className="flex flex-wrap gap-2" role="group" aria-label="Pack">
                     {PACK_OPTIONS.map((p) => {
@@ -1280,6 +1315,7 @@ const GenerateLabelPage = () => {
               fields,
               markets,
               pack: packFormat,
+              ...(productType ? { productType } : {}),
               countries,
               ...(Object.keys(variantText).length ? { variants: variantText } : {}),
             })}

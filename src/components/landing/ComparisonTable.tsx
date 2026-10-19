@@ -2,20 +2,20 @@ import { XCircle, CheckCircle2 } from "lucide-react";
 
 const rows: [string, string][] = [
   [
-    "Brand researches requirements across FSA, OPSS, and Trading Standards, no single source of truth.",
-    "One dashboard. Every compliance requirement for your category, pre-mapped and kept current as regulations change.",
+    "Brands piece together requirements from the UK Cosmetics Regulation, OPSS guidance and EU rules, with no single source of truth.",
+    "One place that checks your label against the UK and EU cosmetics rules for each market you sell in, kept current as they change.",
   ],
   [
-    "Product data compiled manually across spreadsheets, supplier emails, and PDF certificates.",
-    "Barcode lookup pulls known data from GS1 and Open Food Facts. You fill the gaps, not the whole form.",
+    "Label text, INCI lists and Responsible Person details are copied by hand between artwork files, spreadsheets and supplier emails.",
+    "Scan your existing label or start a new one. Labelring reads what's there, so you fill the gaps, not the whole form.",
   ],
   [
-    "Brands discover non-compliance during Trading Standards inspections, or worse, a product recall.",
-    "Live compliance score surfaces gaps before your label goes to print or gets pulled off a shelf.",
+    "Brands discover non-compliance during a Trading Standards inspection, or worse, a product recall.",
+    "Each check shows what needs action, what couldn't be checked and what passed, before your label goes to print.",
   ],
   [
-    "EPR, DPP, HFSS, ESPR, four regulatory waves hitting simultaneously in 2026. Most brands aren't ready.",
-    "Labelring is engineered around 2026 requirements from day one. DPP export, EPR recycling labels, HFSS classification, all built in.",
+    "CMR bans, formaldehyde labelling and the EU allergen update are all landing in 2025 and 2026. Most brands aren't ready.",
+    "Checks for banned and restricted substances, fragrance allergens and required label wording, with a print-ready label per market.",
   ],
 ];
 

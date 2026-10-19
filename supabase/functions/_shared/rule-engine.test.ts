@@ -308,3 +308,82 @@ describe("pack-size exemptions (Article 19)", () => {
     }
   });
 });
+
+describe("product types", () => {
+  const typed: Rulebook = {
+    scope: "cosmetics",
+    version: "test.types",
+    status: "draft",
+    rules: [
+      rule({ rule_key: "colourants", check_type: "colourants", field: "Ingredients" }),
+      rule({ rule_key: "restricted", check_type: "restricted_substances", field: "Ingredients" }),
+      rule({
+        rule_key: "allergens",
+        check_type: "fragrance_allergens",
+        field: "Ingredients",
+        params: { fragrance_markers: ["parfum"] },
+      }),
+      rule({
+        rule_key: "solid_bar_not_food",
+        check_type: "warning_text",
+        field: "Warnings",
+        severity: "best_practice",
+        explanation: "Say it isn't food.",
+        params: { product_types: ["solid_bar"], patterns: ["do not eat", "not edible"] },
+      }),
+    ],
+    substances: [
+      { ...substance("CI 45380", "colourant"), colour_index: ["45380"], product_type: "Not to be used in eye products" },
+      { ...substance("CI 12150", "colourant"), colour_index: ["12150"], product_type: "Rinse-off products" },
+      { ...substance("CI 15850", "colourant"), colour_index: ["15850"], product_type: "Not to be used in products applied on mucous membranes" },
+      { ...substance("CI 77491", "colourant"), colour_index: ["77491"] },
+      { ...substance("Chlorphenesin", "preservative"), other_conditions: "Not to be used in lip products" },
+    ],
+  };
+  const label = (ingredients: string, warnings = "Avoid contact with eyes.") => [
+    field("Ingredients", ingredients),
+    field("Warnings", warnings),
+  ];
+  const run = (fields: ExtractedField[], productType?: Parameters<typeof evaluateRules>[0]["productType"], exposure?: "leave_on" | "rinse_off") =>
+    byKey(evaluateRules({ fields, category: "Cosmetic", markets: ["GB"], productType, exposure }, typed));
+
+  it("fails a colourant the annex rules out for eye products, only in an eye product", () => {
+    const fields = label("Aqua, CI 45380");
+    expect(run(fields, "eye_area").colourants.status).toBe("fail");
+    expect(run(fields, "eye_area").colourants.reason).toContain("not to be used in eye products");
+    expect(run(fields, "liquid_cream").colourants.status).toBe("review");
+    expect(run(fields).colourants.status).toBe("review");
+  });
+
+  it("fails a rinse-off-only colourant in a leave-on product, and accepts it when rinse-off", () => {
+    const fields = label("Aqua, CI 12150");
+    expect(run(fields, "lip_oral").colourants.status).toBe("fail");
+    expect(run(fields, "liquid_cream", "leave_on").colourants.status).toBe("fail");
+    expect(run(fields, "solid_bar").colourants.status).toBe("review");
+  });
+
+  it("fails a colourant not allowed on mucous membranes in a lip product", () => {
+    expect(run(label("Ricinus Communis Seed Oil, CI 15850"), "lip_oral").colourants.status).toBe("fail");
+    expect(run(label("Ricinus Communis Seed Oil, CI 77491"), "lip_oral").colourants.status).toBe("pass");
+  });
+
+  it("fails a preservative the annex rules out for lip products", () => {
+    const fields = label("Cera Alba, Chlorphenesin");
+    expect(run(fields, "lip_oral").restricted.status).toBe("fail");
+    expect(run(fields, "lip_oral").restricted.reason).toContain("not to be used in lip or oral products");
+    expect(run(fields, "liquid_cream").restricted.status).toBe("review");
+  });
+
+  it("runs type-specific rules only for that type", () => {
+    expect(run(label("Sodium Cocoate"), "liquid_cream").solid_bar_not_food).toBeUndefined();
+    expect(run(label("Sodium Cocoate")).solid_bar_not_food).toBeUndefined();
+    expect(run(label("Sodium Cocoate"), "solid_bar").solid_bar_not_food.status).toBe("review");
+    expect(run(label("Sodium Cocoate", "Not edible. Keep dry."), "solid_bar").solid_bar_not_food.status).toBe("pass");
+    // Missing warnings on a bar is a check, not a legal fail.
+    expect(run([field("Ingredients", "Sodium Cocoate"), field("Warnings", null, "missing")], "solid_bar").solid_bar_not_food.status).toBe("review");
+  });
+
+  it("explains the higher allergen risk in a fragrance", () => {
+    expect(run(label("Alcohol Denat., Parfum"), "fragrance").allergens.reason).toContain("Perfumes are leave-on");
+  });
+});
