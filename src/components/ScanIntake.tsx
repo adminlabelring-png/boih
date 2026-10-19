@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { Globe, Languages, Package, UserRound } from "lucide-react";
-import type { Market, PackFormat, Role, ScanOptions } from "@/lib/scan-context";
+import { Globe, Languages, Package, Shapes, UserRound } from "lucide-react";
+import type { Market, PackFormat, ProductType, Role, ScanOptions } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 
 const MARKETS: { value: Market; label: string; hint: string }[] = [
@@ -23,6 +23,16 @@ export const PACK_OPTIONS: { value: PackFormat; label: string; hint: string }[] 
   { value: "leaflet", label: "Too small for all the text", hint: "Some information is on an enclosed leaflet, tag or card" },
 ];
 
+// The kind of cosmetic: decides which annex conditions (e.g. "not to be
+// used in eye products") and type-specific rules apply.
+export const PRODUCT_TYPE_OPTIONS: { value: ProductType; label: string; hint: string }[] = [
+  { value: "liquid_cream", label: "Liquid or cream", hint: "Lotions, creams, serums, gels, shampoos, cleansers, oils" },
+  { value: "solid_bar", label: "Solid or bar", hint: "Soap bars, shampoo bars, solid deodorants" },
+  { value: "eye_area", label: "Eye area", hint: "Mascara, eyeliner, eyeshadow, eye cream" },
+  { value: "lip_oral", label: "Lip or oral", hint: "Lipstick, lip balm, lip gloss, toothpaste, mouthwash" },
+  { value: "fragrance", label: "Fragrance", hint: "Perfume, eau de toilette, body mist" },
+];
+
 // EU countries whose language rules the rulebook covers.
 export const EU_COUNTRY_OPTIONS: { value: string; label: string; hint: string }[] = [
   { value: "DE", label: "Germany", hint: "Label text in German" },
@@ -37,7 +47,8 @@ const chip = (active: boolean) =>
 
 // The intake questions the rule engine needs beyond what it can read off
 // the pack: which markets to check against, who is placing the product on
-// the market, and what it's packed in (Article 19's small-pack rules).
+// the market, what kind of product it is, and what it's packed in
+// (Article 19's small-pack rules).
 const ScanIntake = ({ options, setOptions }: { options: ScanOptions; setOptions: (o: ScanOptions) => void }) => {
   const toggleMarket = (m: Market) => {
     const next = options.markets.includes(m)
@@ -123,6 +134,27 @@ const ScanIntake = ({ options, setOptions }: { options: ScanOptions; setOptions:
             </button>
           ))}
         </div>
+      </div>
+      <div>
+        <div className="flex items-center gap-2">
+          <Shapes className="h-4 w-4 text-muted-foreground" />
+          <p className="text-sm font-medium">What kind of product? <span className="text-muted-foreground font-normal">(optional)</span></p>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Product type">
+          {PRODUCT_TYPE_OPTIONS.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              aria-pressed={options.productType === t.value}
+              onClick={() => setOptions({ ...options, productType: options.productType === t.value ? null : t.value })}
+              className={chip(options.productType === t.value)}
+              title={t.hint}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-xs text-muted-foreground">If you skip this, we'll work it out from the label.</p>
       </div>
       <div>
         <div className="flex items-center gap-2">

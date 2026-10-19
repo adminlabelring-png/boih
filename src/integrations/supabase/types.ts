@@ -161,6 +161,7 @@ export type Database = {
           pao_months: string | null
           preview_text: string | null
           product_name: string | null
+          product_type: string | null
           quid_percent: string | null
           responsible_person: string | null
           eu_responsible_person: string | null
@@ -203,6 +204,7 @@ export type Database = {
           pao_months?: string | null
           preview_text?: string | null
           product_name?: string | null
+          product_type?: string | null
           quid_percent?: string | null
           responsible_person?: string | null
           eu_responsible_person?: string | null
@@ -245,6 +247,7 @@ export type Database = {
           pao_months?: string | null
           preview_text?: string | null
           product_name?: string | null
+          product_type?: string | null
           quid_percent?: string | null
           responsible_person?: string | null
           eu_responsible_person?: string | null

@@ -16,6 +16,13 @@ export type VerificationStatus = "unverified" | "verified" | "rejected";
 export type Role = "manufacturer" | "importer" | "distributor";
 // What the product is packed in, from the intake question.
 export type PackFormat = "carton" | "container_only" | "small" | "sample" | "leaflet";
+// The kind of cosmetic, from the intake question or read off the pack:
+// decides which product-type conditions in the annexes apply and which
+// type-specific rules run.
+export type ProductType = "liquid_cream" | "solid_bar" | "eye_area" | "lip_oral" | "fragrance";
+// Whether the product is washed off after use (from the label builder's
+// leave-on / rinse-off question).
+export type Exposure = "leave_on" | "rinse_off";
 
 export type CheckType =
   | "present"
@@ -30,6 +37,7 @@ export type CheckType =
   | "colourants"
   | "language"
   | "claims"
+  | "warning_text"
   | "advisory";
 
 export interface RuleSource {
@@ -120,6 +128,10 @@ export interface RulebookStamp {
   markets: Market[];
   // The pack answer the check assumed, if one was given.
   pack?: PackFormat | null;
+  // The product type the check assumed, and whether the brand chose it
+  // or it was read off the pack.
+  productType?: ProductType | null;
+  productTypeSource?: "chosen" | "detected" | null;
   // EU countries it was checked for (language rules).
   countries?: string[];
   checkedAt: string;
@@ -135,6 +147,8 @@ export interface EvaluationInput {
   pack?: PackFormat | null;
   // EU countries the product will be sold in (ISO 3166 alpha-2, e.g. DE).
   countries?: string[];
+  productType?: ProductType | null;
+  exposure?: Exposure | null;
 }
 
 export const ALL_MARKETS: Market[] = ["GB", "NI", "EU"];
@@ -150,6 +164,50 @@ export const PACK_FORMATS: PackFormat[] = ["carton", "container_only", "small", 
 
 export const isPackFormat = (p: unknown): p is PackFormat =>
   typeof p === "string" && (PACK_FORMATS as string[]).includes(p);
+
+export const PRODUCT_TYPES: ProductType[] = ["liquid_cream", "solid_bar", "eye_area", "lip_oral", "fragrance"];
+
+export const isProductType = (t: unknown): t is ProductType =>
+  typeof t === "string" && (PRODUCT_TYPES as string[]).includes(t);
+
+export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
+  liquid_cream: "Liquid or cream",
+  solid_bar: "Solid or bar",
+  eye_area: "Eye-area product",
+  lip_oral: "Lip or oral product",
+  fragrance: "Fragrance",
+};
+
+// Eye, lip and fragrance products stay on the skin.
+const LEAVE_ON_TYPES: ProductType[] = ["eye_area", "lip_oral", "fragrance"];
+
+const isLeaveOn = (productType: ProductType | null, exposure: Exposure | null) =>
+  exposure === "leave_on" || (exposure !== "rinse_off" && !!productType && LEAVE_ON_TYPES.includes(productType));
+
+// An annex entry's own wording that rules the ingredient out for this kind
+// of product: "Not to be used in eye products", "Not to be used in lip
+// products", "Rinse-off products" only. Null when nothing conflicts or
+// the product type isn't known.
+export const productTypeConflict = (
+  s: Pick<Substance, "product_type" | "other_conditions">,
+  productType: ProductType | null,
+  exposure: Exposure | null = null
+): string | null => {
+  const text = [s.product_type, s.other_conditions].filter(Boolean).join("; ");
+  if (!text) return null;
+  if (productType === "eye_area" && /not to be used in[^.;]*\beye/i.test(text)) {
+    return "not to be used in eye products";
+  }
+  if (productType === "lip_oral" && /not to be used in[^.;]*\b(lip|oral|mouth|mucous membranes?)\b/i.test(text)) {
+    return /mucous/i.test(text)
+      ? "not to be used in products applied on mucous membranes, which includes lip and oral products"
+      : "not to be used in lip or oral products";
+  }
+  if (isLeaveOn(productType, exposure) && /^\s*(only (for|in) )?rinse-off products\.?\s*$/i.test(s.product_type ?? "")) {
+    return "only allowed in rinse-off products";
+  }
+  return null;
+};
 
 // Which rulebook (if any) covers a scan's detected category. Only cosmetics
 // has a rulebook so far; everything else gets no rule findings.
@@ -225,6 +283,8 @@ interface CheckContext {
   role: Role | null;
   substances: Substance[];
   countries: string[];
+  productType: ProductType | null;
+  exposure: Exposure | null;
 }
 
 const officialNames = (s: Substance) => [s.inci_name, ...s.synonyms];
@@ -296,7 +356,7 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
       ? { status: "pass", reason: `${splitIngredients(value).length} ingredients listed.` }
       : { status: "review", reason: "The ingredient list looks incomplete." },
 
-  fragrance_allergens: ({ rule, value, markets, substances }) => {
+  fragrance_allergens: ({ rule, value, markets, substances, productType }) => {
     const allergens = listFor(substances, "fragrance_allergen", markets);
     const named = allergens.filter((s) => namedIn(value, s));
     const namedLower = new Set(named.flatMap((s) => officialNames(s).map((n) => n.toLowerCase())));
@@ -324,7 +384,10 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
     if (hasFragrance && named.length === 0) {
       return {
         status: "review",
-        reason: "Contains fragrance but no fragrance allergens are named. Confirm with your supplier's allergen statement.",
+        reason:
+          productType === "fragrance"
+            ? "A fragrance with no fragrance allergens named. Perfumes are leave-on and almost always contain allergens above the 0.001% declaration threshold: check your supplier's allergen statement and name each one."
+            : "Contains fragrance but no fragrance allergens are named. Confirm with your supplier's allergen statement.",
       };
     }
     return {
@@ -369,7 +432,7 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
     };
   },
 
-  restricted_substances: ({ value, markets, substances }) => {
+  restricted_substances: ({ value, markets, substances, productType, exposure }) => {
     const listed = substances.filter(
       (s) =>
         (s.list_type === "restricted" || s.list_type === "preservative" || s.list_type === "uv_filter") &&
@@ -380,6 +443,18 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
       return { status: "pass", reason: `None of the ${listed.length} restricted ingredients were found.` };
     }
     const kind = { restricted: "Restricted", preservative: "Preservative", uv_filter: "UV filter" } as Record<string, string>;
+    // The annex entry itself rules the ingredient out for this kind of
+    // product (e.g. "Not to be used in lip products").
+    const conflicts = found.filter((s) => productTypeConflict(s, productType, exposure));
+    if (conflicts.length) {
+      return {
+        status: "fail",
+        reason: `Not allowed in this kind of product: ${describe(
+          conflicts,
+          (s) => `${nameOnLabel(value, s)} — ${kind[s.list_type]}${where(s)}, ${productTypeConflict(s, productType, exposure)}.`
+        )}`,
+      };
+    }
     const lines = describe(found, (s) => {
       const parts = [
         s.product_type && `product types: ${clip(s.product_type)}`,
@@ -396,7 +471,7 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
     };
   },
 
-  colourants: ({ value, markets, substances }) => {
+  colourants: ({ value, markets, substances, productType, exposure }) => {
     const permitted = listFor(substances, "colourant", markets);
     const used = [...new Set([...value.matchAll(CI_NUMBER)].map((m) => m[1]))];
     if (!used.length) return { status: "pass", reason: "No colourants (CI numbers) listed." };
@@ -410,6 +485,19 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
       return {
         status: "fail",
         reason: `Not on the permitted colourant list: ${unknown.map((ci) => `CI ${ci}`).join(", ")}.`,
+      };
+    }
+    // A colourant whose entry rules out this kind of product (e.g. "Not to
+    // be used in eye products") isn't permitted in it.
+    const ruledOut = used
+      .map((ci) => ({ ci, entries: byNumber.get(ci)! }))
+      .filter(({ entries }) => entries.every((s) => productTypeConflict(s, productType, exposure)));
+    if (ruledOut.length) {
+      return {
+        status: "fail",
+        reason: `Not permitted in this kind of product: ${ruledOut
+          .map(({ ci, entries }) => `CI ${ci} (${entries[0].inci_name}${where(entries[0])}): ${productTypeConflict(entries[0], productType, exposure)}`)
+          .join("; ")}.`,
       };
     }
     // Where it may be used matters for the label; purity criteria are the
@@ -471,6 +559,16 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
     };
   },
 
+  // Wording a kind of product should carry (e.g. "Do not eat" on a soap
+  // that could be mistaken for food): a check, never a fail.
+  warning_text: ({ rule, value }) => {
+    const patterns = (rule.params.patterns ?? []) as string[];
+    const found = patterns.map((p) => value.match(new RegExp(p, "i"))?.[0]).find(Boolean);
+    return found
+      ? { status: "pass", reason: `Found: "${found}".` }
+      : { status: "review", reason: rule.explanation };
+  },
+
   advisory: ({ rule, value }) => {
     const triggers = rule.params.only_if_any as string[] | undefined;
     if (triggers && value && !triggers.some((t) => value.toLowerCase().includes(t.toLowerCase()))) {
@@ -504,7 +602,9 @@ const evaluateRule = (
   role: Role | null,
   substances: Substance[],
   pack: PackFormat | null,
-  countries: string[]
+  countries: string[],
+  productType: ProductType | null,
+  exposure: Exposure | null
 ): RuleFinding | null => {
   const applicableMarkets = rule.markets.filter((m) => markets.includes(m));
   const sources = rule.sources.filter((s) => applicableMarkets.includes(s.market));
@@ -529,7 +629,7 @@ const evaluateRule = (
 
   // Advisories don't need the field to be readable.
   if (rule.check_type === "advisory") {
-    const outcome = checks.advisory({ rule, value, markets, role, substances, countries });
+    const outcome = checks.advisory({ rule, value, markets, role, substances, countries, productType, exposure });
     return outcome ? finding(outcome.status, outcome.reason, rule.fix_hint) : null;
   }
 
@@ -569,7 +669,7 @@ const evaluateRule = (
         rule.fix_hint
       );
     }
-    if (rule.check_type === "present_if_applicable") {
+    if (rule.check_type === "present_if_applicable" || rule.check_type === "warning_text") {
       return finding("review", `Not found on the pack. ${rule.explanation}`, rule.fix_hint);
     }
     if (rule.params.required_when === "imported" && role !== "importer") {
@@ -584,7 +684,7 @@ const evaluateRule = (
     return finding("fail", `Not found on the pack. ${rule.explanation}`, rule.fix_hint);
   }
 
-  const outcome = checks[rule.check_type]({ rule, value, markets, role, substances, countries });
+  const outcome = checks[rule.check_type]({ rule, value, markets, role, substances, countries, productType, exposure });
   if (!outcome) return null;
 
   if (field.status === "low_confidence") {
@@ -608,10 +708,29 @@ export const evaluateRules = (input: EvaluationInput, rulebook: Rulebook): RuleF
     (s) => s.verification_status !== "rejected" && (!s.applies_from || s.applies_from <= today)
   );
 
+  const productType = input.productType ?? null;
   const findings = rulebook.rules
     .filter((r) => r.verification_status !== "rejected")
     .filter((r) => r.markets.some((m) => markets.includes(m)))
-    .map((r) => evaluateRule(r, fieldsByLabel, markets, role, substances, input.pack ?? null, input.countries ?? []))
+    // Rules for one kind of product (e.g. solid bars) only run when the
+    // product is known to be that kind.
+    .filter((r) => {
+      const types = r.params.product_types as ProductType[] | undefined;
+      return !types?.length || (!!productType && types.includes(productType));
+    })
+    .map((r) =>
+      evaluateRule(
+        r,
+        fieldsByLabel,
+        markets,
+        role,
+        substances,
+        input.pack ?? null,
+        input.countries ?? [],
+        productType,
+        input.exposure ?? null
+      )
+    )
     .filter((f): f is RuleFinding => f !== null);
 
   return rankFindings(findings);

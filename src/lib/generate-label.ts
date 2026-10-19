@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { LabelFields, Pack } from "./label-rules";
 import { getSignupId } from "@/components/LeadCaptureDialog";
-import type { Market, PackFormat, RuleFinding, RulebookStamp } from "./scan-context";
+import type { Market, PackFormat, ProductType, RuleFinding, RulebookStamp } from "./scan-context";
 
 class GenerateLabelError extends Error {
   status?: number;
@@ -53,13 +53,15 @@ export async function checkDraft(
   fields: LabelFields,
   markets: Market[],
   packFormat: PackFormat | null = null,
-  countries: string[] = []
+  countries: string[] = [],
+  productType: ProductType | null = null
 ): Promise<DraftCheck> {
   const { data, error } = await supabase.functions.invoke("check-label", {
     body: {
       category: fields.category,
       markets,
       pack: packFormat,
+      productType,
       countries,
       draft: {
         productName: fields.productName,
@@ -75,6 +77,7 @@ export async function checkDraft(
         instructionsForUse: fields.instructionsForUse,
         storageInstructions: fields.storageInstructions,
         certifications: fields.certifications,
+        cosmeticProductType: fields.cosmeticProductType,
       },
     },
   });

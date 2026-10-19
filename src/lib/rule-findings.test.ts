@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { summarizeFindings } from "./rule-findings";
+import { rulebookStampText, summarizeFindings } from "./rule-findings";
 import type { RuleFinding } from "./scan-context";
 
 const finding = (
@@ -43,5 +43,25 @@ describe("summarizeFindings", () => {
 
   it("is all zero with no findings", () => {
     expect(summarizeFindings([])).toEqual({ issues: 0, notChecked: 0, passed: 0 });
+  });
+});
+
+describe("rulebookStampText", () => {
+  const stamp = {
+    scope: "cosmetics",
+    version: "2026.2",
+    status: "published" as const,
+    markets: ["GB" as const],
+    checkedAt: "2026-10-19T10:00:00Z",
+  };
+
+  it("says which product type the checks assumed, and when it was read from the label", () => {
+    expect(rulebookStampText({ ...stamp, productType: "eye_area", productTypeSource: "chosen" }, [])).toContain(
+      "Checked as: eye-area product."
+    );
+    expect(rulebookStampText({ ...stamp, productType: "lip_oral", productTypeSource: "detected" }, [])).toContain(
+      "Checked as: lip or oral product (read from the label; if that's wrong, scan again and choose the product type)."
+    );
+    expect(rulebookStampText(stamp, [])).not.toContain("Checked as");
   });
 });

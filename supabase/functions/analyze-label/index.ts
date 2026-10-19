@@ -5,8 +5,10 @@ import {
   isMarket,
   isRole,
   isPackFormat,
+  isProductType,
   rulebookScopeForCategory,
   type Market,
+  type ProductType,
   type Rulebook,
   type RulebookStamp,
 } from "../_shared/rule-engine.ts";
@@ -71,6 +73,7 @@ Fields to extract:
    - "claims": every marketing claim printed on the pack, exactly as written (e.g. "Paraben free", "Dermatologically tested", "100% natural", "Hypoallergenic", "Vegan"). Empty list if none.
    - "languages": ISO 639-1 codes of every language the pack text is written in, excluding the ingredient list (e.g. ["en", "de", "fr"]).
    - "symbols": any of these symbols you can see: "hand_in_book" (an open book with a hand pointing at it), "pao" (open jar with a number and M), "e_mark" (℮), "hourglass" (best-before symbol). Empty list if none.
+   - "product_type": for cosmetics only, the kind of product, one of "liquid_cream" (lotions, creams, serums, gels, shampoos, cleansers, oils), "solid_bar" (soap bars, shampoo bars, solid deodorants, balms in bar form), "eye_area" (mascara, eyeliner, eyeshadow, eye cream, brow products), "lip_oral" (lipstick, lip balm, lip gloss, toothpaste, mouthwash), "fragrance" (perfume, eau de toilette, body mist). Null if it isn't a cosmetic or you can't tell.
 
 5. Detect the product category — one of: Cosmetic, Food, Beverage, Supplement, Household, Other.
    "Cosmetic" covers ALL personal care and cosmetic products — skincare, haircare (including hairsprays, shampoos, styling products), makeup, fragrance, oral care, personal-care aerosols, etc. Don't default to "Other" just because a product isn't facial skincare.
@@ -101,7 +104,8 @@ You MUST respond with ONLY valid JSON matching this exact schema (no markdown, n
     "function": "string or null",
     "claims": ["string", ...],
     "languages": ["string", ...],
-    "symbols": ["string", ...]
+    "symbols": ["string", ...],
+    "product_type": "string or null"
   }
 }`;
 
@@ -280,7 +284,8 @@ async function applyRulebook(
   role: unknown,
   pack: unknown,
   countries: string[],
-  coverageComplete: boolean
+  coverageComplete: boolean,
+  chosenType: unknown
 ) {
   const scope = rulebookScopeForCategory(parsed.category);
   if (!scope || !Array.isArray(parsed.fields)) return { findings: [], rulebook: null };
@@ -293,6 +298,15 @@ async function applyRulebook(
     return { findings: [], rulebook: null };
   }
   if (!rulebook) return { findings: [], rulebook: null };
+
+  // The brand's answer wins; otherwise what the model read off the pack.
+  const detectedType = (parsed.extras as { product_type?: unknown } | undefined)?.product_type;
+  const productType: ProductType | null = isProductType(chosenType)
+    ? chosenType
+    : isProductType(detectedType)
+      ? detectedType
+      : null;
+  const productTypeSource = isProductType(chosenType) ? "chosen" : productType ? "detected" : null;
 
   const findings = evaluateRules(
     {
@@ -307,6 +321,7 @@ async function applyRulebook(
       role: isRole(role) ? role : null,
       pack: isPackFormat(pack) ? pack : null,
       countries,
+      productType,
     },
     rulebook
   );
@@ -325,6 +340,8 @@ async function applyRulebook(
     status: rulebook.status,
     markets,
     pack: isPackFormat(pack) ? pack : null,
+    productType,
+    productTypeSource,
     countries,
     checkedAt: new Date().toISOString(),
   };
@@ -337,7 +354,7 @@ serve(async (req) => {
   }
 
   try {
-    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role, pack, countries: rawCountries, signupId } = await req.json();
+    const { images: rawImages, isSeasonal, seasonTag, markets: rawMarkets, role, pack, productType, countries: rawCountries, signupId } = await req.json();
     const countries: string[] = Array.isArray(rawCountries)
       ? [...new Set(rawCountries.filter((c): c is string => typeof c === "string" && /^[A-Z]{2}$/.test(c)))]
       : [];
@@ -462,7 +479,14 @@ serve(async (req) => {
       );
     }
 
-    const { findings, rulebook } = await applyRulebook(parsed, markets, role, pack, countries, coverageComplete);
+    // Cosmetics declare fragrance allergens within the ingredient list,
+    // checked by the rulebook; a separate food-style "Allergens" field
+    // doesn't apply to them.
+    if (rulebookScopeForCategory(parsed.category) === "cosmetics" && Array.isArray(parsed.fields)) {
+      parsed.fields = parsed.fields.filter((f: { label?: string }) => f?.label !== "Allergens");
+    }
+
+    const { findings, rulebook } = await applyRulebook(parsed, markets, role, pack, countries, coverageComplete, productType);
     parsed.findings = findings;
     parsed.rulebook = rulebook;
 
