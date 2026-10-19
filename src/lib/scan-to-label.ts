@@ -61,6 +61,9 @@ export const scanToLabel = (result: ScanResult): ScanHandoff => {
     // Only allergens named in the ingredient list as printed.
     const ingredients = fields.ingredients.toLowerCase();
     fields.fragranceAllergens = EU_FRAGRANCE_ALLERGENS.filter((a) => ingredients.includes(a.toLowerCase()));
+    // The scan's leave-on / rinse-off answer carries over (it isn't read
+    // off the label, so it isn't counted as prefilled).
+    if (result.rulebook?.exposure) fields.cosmeticProductType = result.rulebook.exposure;
   } else {
     fields.allergens = read("Allergens");
   }
@@ -79,7 +82,7 @@ export const scanToLabel = (result: ScanResult): ScanHandoff => {
     const v = fields[k];
     if (k === "category") return false;
     if (Array.isArray(v)) return v.length > 0;
-    return typeof v === "string" && v.length > 0 && k !== "dateType";
+    return typeof v === "string" && v.length > 0 && k !== "dateType" && k !== "cosmeticProductType";
   });
 
   return {

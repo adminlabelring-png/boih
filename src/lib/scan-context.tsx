@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import type { ScanChanges } from "./scan-diff";
 import { findAllergensInText, findFragranceAllergensInIngredients } from "./allergens";
-import type { Market, PackFormat, ProductType, Role, RuleFinding, RulebookStamp } from "../../supabase/functions/_shared/rule-engine";
+import type { Exposure, Market, PackFormat, ProductType, Role, RuleFinding, RulebookStamp } from "../../supabase/functions/_shared/rule-engine";
 
-export type { Market, PackFormat, ProductType, Role, RuleFinding, RulebookStamp };
+export type { Exposure, Market, PackFormat, ProductType, Role, RuleFinding, RulebookStamp };
 
 // Four-state field status, replacing a binary found/missing model:
 //   verified       — clearly visible, extracted with high confidence
@@ -75,6 +75,9 @@ export interface ScanOptions {
   // What kind of cosmetic it is; when not given, the scanner reads it off
   // the pack.
   productType: ProductType | null;
+  // Leave-on or rinse-off: decides the annexes' "rinse-off products only"
+  // conditions.
+  exposure: Exposure | null;
   // EU countries it's sold in (e.g. DE, FR): each sets the label language.
   countries: string[];
 }
@@ -96,6 +99,7 @@ const defaultOptions: ScanOptions = {
   role: null,
   pack: null,
   productType: null,
+  exposure: null,
   countries: [],
 };
 

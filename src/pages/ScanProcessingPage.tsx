@@ -96,6 +96,7 @@ const ScanProcessingPage = () => {
               role: options.role,
               pack: options.pack,
               productType: options.productType,
+              exposure: options.exposure,
               countries: options.markets.includes("EU") ? options.countries : [],
             },
             signal: abort.signal,
@@ -205,6 +206,7 @@ const ScanProcessingPage = () => {
             // The type the checks assumed: the brand's answer or, failing
             // that, what the scanner read off the pack.
             product_type: result.rulebook?.productType ?? null,
+            exposure: options.exposure,
             // Links the scan to its AI calls and their cost (ai_usage).
             ai_request_id: typeof data?.aiRequestId === "string" ? data.aiRequestId : null,
             eu_countries: options.markets.includes("EU") && options.countries.length ? options.countries : null,
@@ -217,7 +219,7 @@ const ScanProcessingPage = () => {
             .insert({ id: scanId, ...scanRow, ...rulebookColumns });
           // The frontend and the database migration deploy separately; if
           // the rulebook columns don't exist yet, still save the scan.
-          if (insertErr && /rulebook_version|rule_findings|pack_format|product_type|eu_countries|ai_request_id/.test(insertErr.message)) {
+          if (insertErr && /rulebook_version|rule_findings|pack_format|product_type|exposure|eu_countries|ai_request_id/.test(insertErr.message)) {
             ({ error: insertErr } = await supabase.from("scans" as any).insert({ id: scanId, ...scanRow }));
           }
           if (insertErr) console.warn("scan save failed", insertErr);
