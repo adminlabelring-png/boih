@@ -1,4 +1,4 @@
-import { emptyLabel, type LabelFields } from "./label-rules";
+import { emptyLabel, getPack, type LabelFields } from "./label-rules";
 import { EU_FRAGRANCE_ALLERGENS } from "./allergens";
 import type { DetectedField, RuleFinding, RulebookStamp, ScanResult } from "./scan-context";
 
@@ -39,7 +39,7 @@ const readValue = (fields: DetectedField[], label: string): string => {
 
 export const scanToLabel = (result: ScanResult): ScanHandoff => {
   const category = SCAN_TO_GENERATOR_CATEGORY[result.category.trim().toLowerCase()] ?? "Other";
-  const isCosmetic = category === "Skincare";
+  const isCosmetic = getPack(category) === "cosmetic";
   const read = (label: string) => readValue(result.fields, label);
 
   const fields: LabelFields = {

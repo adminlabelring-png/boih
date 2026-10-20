@@ -40,6 +40,11 @@ const SignInForms = () => {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<null | "confirm" | "reset">(null);
+  const [tab, setTab] = useState("signin");
+  // Signing up with an address that already has an account: Supabase
+  // returns success without sending anything (so nobody can find out who
+  // has an account), so say so here rather than "check your email".
+  const [exists, setExists] = useState(false);
 
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +64,11 @@ const SignInForms = () => {
     });
     setBusy(false);
     if (error) return toast.error(error.message);
+    // An existing address comes back as a user with no identities.
+    if (data.user && data.user.identities?.length === 0) {
+      setExists(true);
+      return;
+    }
     // With email confirmation on, there's no session until the link is used.
     if (!data.session) setSent("confirm");
   };
@@ -81,6 +91,31 @@ const SignInForms = () => {
             ? `We've sent a link to ${email}. Open it to confirm your account, then come back here.`
             : `We've sent a password reset link to ${email}.`}
         </p>
+      </Card>
+    );
+  }
+
+  if (exists) {
+    return (
+      <Card className="p-6 space-y-3">
+        <h1 className="text-xl font-semibold">You already have an account</h1>
+        <p className="text-sm text-muted-foreground">
+          There's already an account for {email}. Sign in, or reset your password if you've forgotten it.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => {
+              setExists(false);
+              setPassword("");
+              setTab("signin");
+            }}
+          >
+            Sign in
+          </Button>
+          <Button variant="outline" onClick={reset} disabled={busy}>
+            {busy ? "Working…" : "Reset my password"}
+          </Button>
+        </div>
       </Card>
     );
   }
@@ -108,7 +143,7 @@ const SignInForms = () => {
 
   return (
     <Card className="p-6">
-      <Tabs defaultValue="signin">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid grid-cols-2 w-full mb-4">
           <TabsTrigger value="signin">Sign in</TabsTrigger>
           <TabsTrigger value="signup">Create account</TabsTrigger>

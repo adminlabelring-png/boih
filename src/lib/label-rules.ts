@@ -80,7 +80,7 @@ export const emptyLabel: LabelFields = {
 export const getPack = (category: string): Pack => {
   const c = category.trim().toLowerCase();
   if (c === "food" || c === "beverage" || c === "supplement") return "food";
-  if (c === "skincare" || c === "cosmetic") return "cosmetic";
+  if (["skincare", "haircare", "makeup", "fragrance", "cosmetic"].includes(c)) return "cosmetic";
   return "generic";
 };
 

@@ -131,7 +131,7 @@ export const useScan = () => {
 
 const isCosmeticCategory = (category: string) => {
   const c = category.trim().toLowerCase();
-  return c === "cosmetic" || c === "skincare";
+  return ["cosmetic", "skincare", "haircare", "makeup", "fragrance"].includes(c);
 };
 
 const isFoodRegimeCategory = (category: string) => {
