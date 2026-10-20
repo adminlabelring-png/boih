@@ -451,3 +451,11 @@ describe("required warnings", () => {
     expect(run("Aqua, Thimerosal", "Enthält Thiomersal.", "verified", ["EU"]).status).toBe("review");
   });
 });
+
+describe("cosmetics categories", () => {
+  it("checks skincare, haircare, makeup and fragrance against the cosmetics rulebook, and nothing else", async () => {
+    const { rulebookScopeForCategory } = await import("./rule-engine");
+    for (const c of ["Skincare", "Haircare", "Makeup", "Fragrance", "Cosmetic"]) expect(rulebookScopeForCategory(c)).toBe("cosmetics");
+    for (const c of ["Food", "Beverage", "Supplement", "Household", "Other", ""]) expect(rulebookScopeForCategory(c)).toBeNull();
+  });
+});

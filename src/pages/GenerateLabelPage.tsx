@@ -61,7 +61,7 @@ import PrintDialog from "@/components/generator/PrintDialog";
 import { buildPrintPdf, loadFonts, type PrintExtras, type PrintSpec } from "@/lib/print-label";
 import { finishPdfX, pdfBytes, preflightPdfX1a } from "@/lib/pdfx";
 
-import { CATEGORIES } from "@/lib/categories";
+import { GENERATOR_CATEGORIES } from "@/lib/categories";
 import LeadCaptureDialog, { hasSubmittedLead, getSignupId } from "@/components/LeadCaptureDialog";
 import { useSeo } from "@/hooks/use-seo";
 import { useSession } from "@/hooks/use-session";
@@ -718,7 +718,12 @@ const GenerateLabelPage = () => {
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map((c) => (
+                    {/* Cosmetics only; a label saved under a hidden category
+                        (e.g. Food) still shows it. */}
+                    {[
+                      ...GENERATOR_CATEGORIES,
+                      ...(fields.category && !GENERATOR_CATEGORIES.includes(fields.category) ? [fields.category] : []),
+                    ].map((c) => (
                       <SelectItem key={c} value={c}>
                         {c}
                       </SelectItem>

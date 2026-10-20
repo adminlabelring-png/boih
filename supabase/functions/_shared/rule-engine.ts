@@ -216,7 +216,7 @@ export const productTypeConflict = (
 // has a rulebook so far; everything else gets no rule findings.
 export const rulebookScopeForCategory = (category: string | null | undefined): "cosmetics" | null => {
   const c = (category ?? "").trim().toLowerCase();
-  return c === "cosmetic" || c === "cosmetics" || c === "skincare" ? "cosmetics" : null;
+  return ["cosmetic", "cosmetics", "skincare", "haircare", "makeup", "fragrance"].includes(c) ? "cosmetics" : null;
 };
 
 // ------------------------------------------------------------------

@@ -64,7 +64,8 @@ const ScanResultsPage = () => {
     navigate("/scan");
   };
 
-  const categories = ["Cosmetic", "Food", "Beverage", "Supplement", "Household", "Other"];
+  // Cosmetics only for now; a scan read as another category still shows it.
+  const categories = ["Cosmetic", ...(category && category !== "Cosmetic" ? [category] : [])];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
