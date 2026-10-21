@@ -16,6 +16,8 @@ interface BrandContextValue {
   brand: Brand | null;
   brands: Brand[];
   loading: boolean;
+  // The brand list couldn't be loaded: not the same as having no brands.
+  error: boolean;
   switchBrand: (id: string) => void;
   refresh: () => void;
 }
@@ -45,17 +47,20 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [reloads, setReloads] = useState(0);
   const refresh = useCallback(() => setReloads((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     (async () => {
       const { data, error } = await supabase
         .from("brands")
         .select("id, name, slug, vertical, logo_url, default_market")
         .order("created_at", { ascending: true });
       if (cancelled) return;
+      setError(Boolean(error));
       if (!error && data) {
         const list = data as Brand[];
         setBrands(list);
@@ -76,7 +81,7 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const brand = brands.find(b => b.id === activeId) ?? null;
 
   return (
-    <BrandContext.Provider value={{ brand, brands, loading, switchBrand, refresh }}>
+    <BrandContext.Provider value={{ brand, brands, loading, error, switchBrand, refresh }}>
       {children}
     </BrandContext.Provider>
   );

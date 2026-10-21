@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, Clock, Bell, Info } from "lucide-react";
 import { useBrand } from "@/lib/brand-context";
 import { daysAgo, fetchProducts, fetchSuppliers } from "@/lib/workspace-queries";
 import { fetchBrandLabels } from "@/lib/brand-labels";
+import LoadError from "@/components/workspace/LoadError";
 
 interface Item { severity: "danger" | "warn" | "info"; title: string; sub: string; time: string; to?: string; }
 
@@ -20,13 +21,17 @@ const Icon = ({ s }: { s: Item["severity"] }) => {
 const CompliancePage = () => {
   const { brand } = useBrand();
   const [items, setItems] = useState<Item[]>([]);
+  // "All clear" only once everything has loaded: a failed load must never
+  // read as no alerts.
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!brand) return;
+    setState("loading");
     Promise.all([
       fetchProducts(brand.id),
       fetchSuppliers(brand.id),
-      fetchBrandLabels(brand.id).catch(() => []),
+      fetchBrandLabels(brand.id),
     ]).then(([products, suppliers, labels]) => {
       const list: Item[] = [];
       // Saved labels with failing checks (same threshold as the dashboard).
@@ -53,17 +58,25 @@ const CompliancePage = () => {
         list.push({ severity: "info", title: `${p.name} awaiting review`, sub: `Version ${p.label_version} pending sign-off.`, time: daysAgo(p.updated_at) });
       });
       setItems(list);
-    });
+      setState("ready");
+    }).catch(() => setState("error"));
   }, [brand]);
+
+  useEffect(load, [load]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">Compliance</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{brand?.name} — {items.length} active alerts</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {brand?.name}
+            {state === "ready" && ` — ${items.length} active alert${items.length === 1 ? "" : "s"}`}
+          </p>
         </div>
       </div>
+
+      {state === "error" && <LoadError what="alerts" onRetry={load} />}
 
       <div className="rounded-lg border bg-card">
         <div className="p-4 border-b flex items-center gap-1.5">
@@ -83,7 +96,8 @@ const CompliancePage = () => {
               </div>
             </div>
           ))}
-          {items.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">All clear.</p>}
+          {state === "loading" && <p className="p-8 text-center text-sm text-muted-foreground">Loading alerts…</p>}
+          {state === "ready" && items.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">All clear.</p>}
         </div>
       </div>
     </div>

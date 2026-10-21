@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useSeo } from "@/hooks/use-seo";
 import { useSession } from "@/hooks/use-session";
 import { ACTIVE_BRAND_KEY } from "@/lib/brand-context";
+import LoadError from "@/components/workspace/LoadError";
 
 // Brand accounts: create an account or sign in, then create a brand (or
 // open one you already belong to). Brand members see their brand's saved
@@ -212,6 +213,9 @@ const AccountPage = () => {
   const navigate = useNavigate();
   const [recovering, setRecovering] = useState(false);
   const [brands, setBrands] = useState<MyBrand[] | null>(null);
+  // A failed load mustn't offer to create a brand the account already has.
+  const [brandsFailed, setBrandsFailed] = useState(false);
+  const [brandsReload, setBrandsReload] = useState(0);
   const [name, setName] = useState("");
   const [market, setMarket] = useState("UK");
   const [creating, setCreating] = useState(false);
@@ -230,20 +234,20 @@ const AccountPage = () => {
       setBrands(null);
       return;
     }
+    setBrandsFailed(false);
     (async () => {
       const { data, error } = await supabase
         .from("brand_members" as never)
         .select("role, brands(id, name, default_market)")
         .eq("user_id", userId);
       if (error) {
-        toast.error(error.message);
-        setBrands([]);
+        setBrandsFailed(true);
         return;
       }
       const rows = (data ?? []) as unknown as { role: string; brands: Omit<MyBrand, "role"> | null }[];
       setBrands(rows.filter((r) => r.brands).map((r) => ({ ...r.brands!, role: r.role })));
     })();
-  }, [userId]);
+  }, [userId, brandsReload]);
 
   const openBrand = (id: string, to = "/workspace") => {
     try {
@@ -290,7 +294,9 @@ const AccountPage = () => {
               </Button>
             </div>
 
-            {brands === null ? (
+            {brandsFailed ? (
+              <LoadError what="brands" onRetry={() => setBrandsReload((n) => n + 1)} />
+            ) : brands === null ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : (
               <div className="space-y-2">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useBrand } from "@/lib/brand-context";
+import LoadError from "@/components/workspace/LoadError";
 import {
   CHANGE_FIELD_NAMES,
   fetchBrandLabels,
@@ -82,6 +83,7 @@ const LabelsPage = () => {
   const { brand } = useBrand();
   const [rows, setRows] = useState<BrandLabel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [tab, setTab] = useState<(typeof TABS)[number]>("active");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -89,9 +91,10 @@ const LabelsPage = () => {
   const load = useCallback(() => {
     if (!brand) return;
     setLoading(true);
+    setLoadFailed(false);
     fetchBrandLabels(brand.id)
       .then(setRows)
-      .catch((e) => toast.error(e.message ?? "Couldn't load labels."))
+      .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
   }, [brand]);
 
@@ -125,7 +128,8 @@ const LabelsPage = () => {
         <div>
           <h1 className="text-lg font-semibold">Label library</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {brand?.name} — {activeCount} label{activeCount === 1 ? "" : "s"}
+            {brand?.name}
+            {!loading && !loadFailed && ` — ${activeCount} label${activeCount === 1 ? "" : "s"}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -140,6 +144,8 @@ const LabelsPage = () => {
           </Button>
         </div>
       </div>
+
+      {loadFailed && <LoadError what="labels" onRetry={load} />}
 
       <div className="rounded-lg border bg-card">
         <div className="flex items-center gap-1 p-3 border-b">
@@ -230,7 +236,12 @@ const LabelsPage = () => {
                   )}
                 </Fragment>
               ))}
-              {!loading && filtered.length === 0 && (
+              {loading && rows.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">Loading labels…</td>
+                </tr>
+              )}
+              {!loading && !loadFailed && filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     {rows.length === 0 ? (
