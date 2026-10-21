@@ -112,12 +112,11 @@ const DashboardPage = () => {
       )}
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {[
           { label: "Saved labels",   icon: Tag,           value: total, sub: `${updatedThisMonth} updated this month`, tone: "ok" },
           { label: "Checks passed",  icon: CheckCircle2,  value: avgScore === null ? "—" : `${avgScore}%`, sub: "Average, latest versions", tone: avgScore !== null && avgScore < 80 ? "warn" : "ok" },
           { label: "Need work",      icon: AlertTriangle, value: failingCount, sub: "Below 80% checks passed", tone: failingCount ? "danger" : "ok" },
-          { label: "Products",       icon: Clock,         value: products.length, sub: "Tracked products", tone: "ok" },
         ].map(m => (
           <div key={m.label} className="rounded-lg border bg-card p-4">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><m.icon className="h-3.5 w-3.5" /> {m.label}</div>
@@ -168,8 +167,9 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Alerts + suppliers row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Alerts + suppliers row (suppliers only once there are any: there's
+          no way to add them yet) */}
+      <div className={`grid grid-cols-1 gap-4 ${suppliers.length ? "lg:grid-cols-2" : ""}`}>
         <div className="rounded-lg border bg-card">
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="text-sm font-semibold flex items-center gap-1.5"><Bell className="h-4 w-4 text-muted-foreground" /> Compliance alerts</h2>
@@ -195,7 +195,7 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="rounded-lg border bg-card">
+        {suppliers.length > 0 && <div className="rounded-lg border bg-card">
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="text-sm font-semibold flex items-center gap-1.5"><Factory className="h-4 w-4 text-muted-foreground" /> Supplier monitoring</h2>
             <Button asChild variant="ghost" size="sm" className="gap-1 text-xs"><Link to="/workspace/suppliers">View all <ArrowRight className="h-3 w-3" /></Link></Button>
@@ -210,9 +210,8 @@ const DashboardPage = () => {
                 <StatusPill status={s.verification_status === "spec_change" ? "in_review" : s.verification_status === "verified" ? "approved" : "flagged"} />
               </div>
             ))}
-            {suppliers.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">No suppliers yet.</p>}
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );

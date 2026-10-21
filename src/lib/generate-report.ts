@@ -104,7 +104,13 @@ export const generateComplianceReport = (result: ScanResult) => {
     y += 8;
 
     const findingColor = (status: string): [number, number, number] =>
-      status === "fail" || status === "review" ? [200, 50, 50] : status === "not_verified" ? [200, 150, 0] : [34, 139, 34];
+      status === "fail" || status === "review"
+        ? [200, 50, 50]
+        : status === "not_verified"
+          ? [200, 150, 0]
+          : status === "note"
+            ? [110, 110, 110]
+            : [34, 139, 34];
 
     for (const [severity, heading] of [["legal", "Legal requirements"], ["best_practice", "Best practice"]] as const) {
       const group = result.findings.filter((f) => f.severity === severity);

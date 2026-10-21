@@ -10,6 +10,7 @@ import RuleFindings from "@/components/RuleFindings";
 import { CHECK_DISCLAIMER } from "@/lib/disclaimer";
 import { cn } from "@/lib/utils";
 import { useSeo } from "@/hooks/use-seo";
+import { useAdminSession } from "@/hooks/use-admin-session";
 
 const statusIcon = (status: DetectedField["status"]) => {
   switch (status) {
@@ -44,6 +45,7 @@ const ScanResultsPage = () => {
   useSeo({ title: "Your scan results | Labelring", description: "Labelring scan results.", noindex: true });
 
   const { result, reset } = useScan();
+  const { isAdmin } = useAdminSession();
   const navigate = useNavigate();
   const [category, setCategory] = useState(result?.category ?? "Cosmetic");
   const [showCategorySelect, setShowCategorySelect] = useState(false);
@@ -128,7 +130,9 @@ const ScanResultsPage = () => {
               Pending approval — differs from locked v{result.lockedVersion.versionNumber}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              This scan does not match the approved master artwork. A change request has been opened. An admin must approve or reject it in the Approvals dashboard before this version can be used in production.
+              {isAdmin
+                ? "This scan does not match the approved master artwork. A change request has been opened. Approve or reject it in the Approvals dashboard before this version is used in production."
+                : "This scan doesn't match the approved version of this label. The changes have been sent for review before this version is used in production."}
             </p>
           </div>
         </motion.div>
@@ -149,7 +153,9 @@ const ScanResultsPage = () => {
         </motion.div>
       )}
 
-      {!result.lockedVersion && result.productKey && (
+      {/* Locking a master is done by Labelring in the admin dashboard, so
+          only admins are told about it. */}
+      {isAdmin && !result.lockedVersion && result.productKey && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           className="rounded-lg border bg-card p-3 flex gap-3 items-start">
           <Lock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />

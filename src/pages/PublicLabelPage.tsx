@@ -80,14 +80,6 @@ const PublicLabelPage = () => {
     );
   }
 
-  const score = label.compliance_score;
-  const scoreColor =
-    score >= 80
-      ? "text-[hsl(var(--risk-low))]"
-      : score >= 50
-      ? "text-[hsl(var(--risk-medium))]"
-      : "text-[hsl(var(--risk-high))]";
-
   return (
     <div className="min-h-screen bg-muted/40 py-6">
       <div className="mx-auto max-w-lg px-4">
@@ -113,14 +105,6 @@ const PublicLabelPage = () => {
                 {label.category && (
                   <div className="mt-0.5 text-xs opacity-80">{label.category}</div>
                 )}
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] uppercase tracking-wider opacity-80">
-                  Score
-                </div>
-                <div className={`text-3xl font-bold ${scoreColor} rounded bg-white/95 px-2 py-0.5`}>
-                  {score}%
-                </div>
               </div>
             </div>
           </div>

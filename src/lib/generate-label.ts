@@ -77,6 +77,7 @@ export async function checkDraft(
         instructionsForUse: fields.instructionsForUse,
         storageInstructions: fields.storageInstructions,
         certifications: fields.certifications,
+        claims: fields.claims,
         cosmeticProductType: fields.cosmeticProductType,
       },
     },

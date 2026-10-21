@@ -4,13 +4,15 @@ import { PRODUCT_TYPE_LABELS } from "../../supabase/functions/_shared/rule-engin
 // Shared between the results page and the PDF export so both describe
 // rule findings and the rulebook stamp in the same words. Colours follow
 // traffic lights: fail and review are red (both need action), couldn't
-// check is amber, pass is green.
+// check is amber, pass is green. A reminder ("note") is neutral: nothing
+// wrong was found, only something to confirm off the label.
 
 export const findingStatusLabel = (status: RuleFinding["status"]) => {
   switch (status) {
     case "pass": return "Meets rule";
     case "review": return "Action needed";
     case "not_verified": return "Couldn't check";
+    case "note": return "Reminder";
     case "fail": return "Action needed";
   }
 };
@@ -22,7 +24,7 @@ export const findingStatusLabel = (status: RuleFinding["status"]) => {
 export const summarizeFindings = (findings: RuleFinding[]) => ({
   issues: findings.filter((f) => f.status === "fail" || f.status === "review").length,
   notChecked: findings.filter((f) => f.status === "not_verified").length,
-  passed: findings.filter((f) => f.status === "pass").length,
+  passed: findings.filter((f) => f.status === "pass" || f.status === "note").length,
 });
 
 const MARKET_NAMES: Record<string, string> = { GB: "Great Britain", NI: "Northern Ireland", EU: "EU" };

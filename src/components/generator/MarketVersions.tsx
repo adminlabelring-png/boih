@@ -54,7 +54,7 @@ const MarketVersions = ({ master, variants, text, onChange, checks, translating,
         const t = text[v.id] ?? {};
         const rp = v.market === "GB" ? master.responsiblePerson : master.euResponsiblePerson;
         const check = checks[v.id];
-        const open = check?.findings.filter((f) => f.status !== "pass") ?? [];
+        const open = check?.findings.filter((f) => f.status !== "pass" && f.status !== "note") ?? [];
         return (
           <TabsContent key={v.id} value={v.id} className="space-y-4 pt-2">
             <div className="grid gap-1 text-xs">

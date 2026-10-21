@@ -167,6 +167,7 @@ export const labelBlocks = (
   if (has(f.responsiblePerson)) b.push(text(f.responsiblePerson));
   if (has(f.euResponsiblePerson)) b.push(text(f.euResponsiblePerson));
   if (has(f.countryOfOrigin)) b.push(text(words.madeIn(f.countryOfOrigin)));
+  if (has(f.claims)) b.push(text(f.claims));
   if (has(f.certifications)) b.push(text(f.certifications));
   return b;
 };

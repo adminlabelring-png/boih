@@ -34,6 +34,12 @@ describe("draftToExtracted", () => {
     expect(byLabel({ dateType: "pao" })["Expiry / Best Before"].status).toBe("missing");
   });
 
+  it("checks the claims field along with the other free text", () => {
+    expect(byLabel({ claims: "Clinically proven", productName: "Rose Cream" })["Claims"].value).toBe(
+      "Clinically proven; Rose Cream"
+    );
+  });
+
   it("uses instructions for use as the warnings text", () => {
     expect(byLabel({ instructionsForUse: "Avoid contact with eyes." })["Warnings"].value).toBe("Avoid contact with eyes.");
   });

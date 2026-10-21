@@ -120,7 +120,8 @@ describe("official annex data", () => {
 
   it("gives preservative limits (phenoxyethanol, 1 %)", () => {
     const f = check("Aqua, Glycerin, Phenoxyethanol", ["GB"]);
-    expect(f.restricted_substances.status).toBe("review");
+    // A reminder to confirm the amount, not an issue.
+    expect(f.restricted_substances.status).toBe("note");
     expect(f.restricted_substances.reason).toContain("Phenoxyethanol");
     expect(f.restricted_substances.reason).toContain("1,0 %");
   });

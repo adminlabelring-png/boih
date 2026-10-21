@@ -74,6 +74,8 @@ export const scanToLabel = (result: ScanResult): ScanHandoff => {
     fields.instructionsForUse = read("Warnings");
     // Only allergens named in the ingredient list as printed.
     fields.fragranceAllergens = namedFragranceAllergens(fields.ingredients);
+    // Claims aren't a field on the scan; they come with it as a list.
+    fields.claims = (result.claims ?? []).join("; ");
     // The scan's leave-on / rinse-off answer carries over (it isn't read
     // off the label, so it isn't counted as prefilled).
     if (result.rulebook?.exposure) fields.cosmeticProductType = result.rulebook.exposure;
@@ -170,7 +172,7 @@ export const diffAgainstScan = (
     if (before === after) return [];
     // Findings are ranked (legal and action-needed first), so the first
     // match is the most important reason for this field to change.
-    const finding = findings.find((f) => f.field === scanField && f.status !== "pass");
+    const finding = findings.find((f) => f.field === scanField && f.status !== "pass" && f.status !== "note");
     const reason = finding
       ? oneLine(`${finding.title}: ${finding.fix ?? finding.reason}`)
       : "Edited by you";

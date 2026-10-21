@@ -21,6 +21,7 @@ export interface LabelDraft {
   storageInstructions?: string;
   cosmeticProductType?: string;
   certifications?: string;
+  claims?: string;
 }
 
 const clean = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
@@ -54,7 +55,10 @@ export const draftToExtracted = (d: LabelDraft): ExtractedField[] => {
     // Cream"); the rule asks for a check when there's no name.
     field("Product Function", clean(d.productName)),
     // Claims can appear anywhere the brand writes free text.
-    field("Claims", [clean(d.productName), clean(d.instructionsForUse), clean(d.certifications)].filter(Boolean).join("; ")),
+    field(
+      "Claims",
+      [clean(d.claims), clean(d.productName), clean(d.instructionsForUse), clean(d.certifications)].filter(Boolean).join("; ")
+    ),
     {
       label: "Label Languages",
       value:

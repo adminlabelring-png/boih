@@ -47,6 +47,7 @@ interface FieldsIn {
   responsiblePerson?: string;
   euResponsiblePerson?: string;
   certifications?: string;
+  claims?: string;
   dateType?: "use_by" | "best_before" | "pao" | "durability" | "";
   storageInstructions?: string;
   quidPercent?: string;
@@ -131,6 +132,7 @@ function contextBlock(fields: FieldsIn, pack: Pack): string {
   if (fields.instructionsForUse) lines.push(`Instructions for use: ${fields.instructionsForUse}`);
   if (fields.responsiblePerson) lines.push(`FBO / Responsible person: ${fields.responsiblePerson}`);
   if (fields.euResponsiblePerson) lines.push(`EU / Northern Ireland Responsible person: ${fields.euResponsiblePerson}`);
+  if (fields.claims) lines.push(`Claims: ${fields.claims}`);
   if (fields.certifications) lines.push(`Certifications: ${fields.certifications}`);
   if (fields.packagedProtectiveAtmosphere) lines.push("Packaged in a protective atmosphere.");
   if (fields.nano) lines.push("Contains engineered nanomaterials.");

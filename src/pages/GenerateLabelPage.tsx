@@ -220,7 +220,7 @@ const GenerateLabelPage = () => {
   // and other packs still use the built-in checks.
   const rulebookFindings = pack === "cosmetic" && draftCheck?.rulebook ? draftCheck.findings : null;
   const score = rulebookFindings?.length
-    ? Math.round((rulebookFindings.filter((f) => f.status === "pass").length / rulebookFindings.length) * 100)
+    ? Math.round((rulebookFindings.filter((f) => f.status === "pass" || f.status === "note").length / rulebookFindings.length) * 100)
     : fixedScore;
   const derivedWarnings = useMemo(() => deriveWarnings(fields), [fields]);
   const detectedAllergens = useMemo(
@@ -767,6 +767,17 @@ const GenerateLabelPage = () => {
                   onChange={(e) => set("productName", e.target.value)}
                 />
               )}
+              {pack === "cosmetic" &&
+                withSuggest(
+                  "claims",
+                  <Textarea
+                    id="claims"
+                    rows={2}
+                    placeholder="e.g. Dermatologically tested; Paraben free (leave empty if none)"
+                    value={fields.claims}
+                    onChange={(e) => set("claims", e.target.value)}
+                  />
+                )}
             </div>
           </section>
 
@@ -1432,6 +1443,7 @@ const FIELD_LABELS: Record<string, string> = {
   responsiblePerson: "Responsible person / FBO (UK)",
   euResponsiblePerson: "Responsible person (EU / Northern Ireland)",
   certifications: "Certifications",
+  claims: "Claims on the pack",
   storageInstructions: "Storage instructions",
   quidPercent: "QUID declaration",
   alcoholAbv: "Alcohol strength (% vol)",

@@ -34,6 +34,9 @@ export interface LabelFields {
   // Responsible Person; a master label can carry both addresses.
   euResponsiblePerson: string;
   certifications: string;
+  // Marketing claims printed on the pack ("Dermatologically tested"),
+  // checked against the claims criteria.
+  claims: string;
   // UK FIC extensions
   dateType: "" | "use_by" | "best_before" | "pao" | "durability";
   storageInstructions: string;
@@ -63,6 +66,7 @@ export const emptyLabel: LabelFields = {
   responsiblePerson: "",
   euResponsiblePerson: "",
   certifications: "",
+  claims: "",
   dateType: "",
   storageInstructions: "",
   quidPercent: "",

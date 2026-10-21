@@ -43,6 +43,12 @@ describe("scanToLabel", () => {
     expect(cat("Rosehip Night Cream")).toBe("Skincare");
   });
 
+  it("carries the claims read off the pack", () => {
+    const h = scanToLabel(result({ claims: ["Clinically proven to cure dandruff", "Vegan"] }));
+    expect(h.fields.claims).toBe("Clinically proven to cure dandruff; Vegan");
+    expect(h.prefilled).toContain("claims");
+  });
+
   it("ticks only the allergens named as whole ingredients", () => {
     const h = scanToLabel(
       result({ fields: [f("Ingredients", "Aqua, Fragrance, Hexyl Cinnamal, Butylphenyl Methylpropional")] })

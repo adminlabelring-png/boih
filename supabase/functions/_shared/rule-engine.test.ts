@@ -371,7 +371,7 @@ describe("product types", () => {
     const fields = label("Cera Alba, Chlorphenesin");
     expect(run(fields, "lip_oral").restricted.status).toBe("fail");
     expect(run(fields, "lip_oral").restricted.reason).toContain("not to be used in lip or oral products");
-    expect(run(fields, "liquid_cream").restricted.status).toBe("review");
+    expect(run(fields, "liquid_cream").restricted.status).toBe("note");
   });
 
   it("runs type-specific rules only for that type", () => {
@@ -490,11 +490,42 @@ describe("ingredient names inside longer names", () => {
     const f = withIngredients("Aqua, Parfum, Hexyl Cinnamal");
     expect(f.allergens.reason).toContain("Hexyl Cinnamal");
     expect(f.allergens.reason).not.toMatch(/Cinnamal, |, Cinnamal/);
-    expect(f.restricted.reason).not.toMatch(/(^|[^l] )Cinnamal —/);
+    expect(f.restricted.reason).toContain("Hexyl Cinnamal (restricted)");
+    expect(f.restricted.reason).not.toMatch(/(: |; )Cinnamal \(/);
   });
 
   it("still finds Cinnamal when it's listed on its own as well", () => {
     const f = withIngredients("Aqua, Parfum, Cinnamal, Hexyl Cinnamal");
     expect(f.allergens.reason).toBe("Declared: Cinnamal, Hexyl Cinnamal.");
+  });
+});
+
+describe("restricted ingredients", () => {
+  const book: Rulebook = {
+    ...rulebook,
+    rules: [rule({ rule_key: "restricted", check_type: "restricted_substances", field: "Ingredients" })],
+    substances: [
+      { ...substance("Limonene", "restricted"), annex_ref: "III/167", other_conditions: "Peroxide value less than 20 mmoles/L" },
+      { ...substance("Limonene", "restricted"), annex_ref: "III/168", other_conditions: "Peroxide value less than 20 mmoles/L" },
+      { ...substance("Potassium Sorbate", "preservative"), annex_ref: "V/4", max_concentration: "0,6 % (acid)" },
+    ],
+  };
+  const run = (ingredients: string) =>
+    byKey(
+      evaluateRules(
+        { fields: [field("Ingredients", ingredients)], category: "Cosmetic", markets: ["GB"] },
+        book
+      )
+    ).restricted;
+
+  it("is a reminder, not an issue, when nothing rules the ingredient out", () => {
+    expect(run("Aqua, Potassium Sorbate, Limonene").status).toBe("note");
+  });
+
+  it("lists each ingredient once, briefly", () => {
+    const { reason } = run("Aqua, Potassium Sorbate, Limonene");
+    expect(reason.match(/Limonene/g)).toHaveLength(1);
+    expect(reason).toContain("Potassium Sorbate (preservative; max 0,6 % (acid))");
+    expect(reason).toContain("Limonene (restricted; Peroxide value less than 20 mmoles/L)");
   });
 });
