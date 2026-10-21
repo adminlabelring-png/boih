@@ -459,3 +459,42 @@ describe("cosmetics categories", () => {
     for (const c of ["Food", "Beverage", "Supplement", "Household", "Other", ""]) expect(rulebookScopeForCategory(c)).toBeNull();
   });
 });
+
+describe("ingredient names inside longer names", () => {
+  const book: Rulebook = {
+    ...rulebook,
+    rules: [
+      ...rulebook.rules,
+      rule({ rule_key: "restricted", check_type: "restricted_substances", field: "Ingredients" }),
+    ],
+    substances: [
+      substance("Cinnamal", "fragrance_allergen"),
+      substance("Hexyl Cinnamal", "fragrance_allergen"),
+      substance("Cinnamal", "restricted"),
+      substance("Hexyl Cinnamal", "restricted"),
+    ],
+  };
+  const withIngredients = (ingredients: string) =>
+    byKey(
+      evaluateRules(
+        {
+          fields: compliantUkLabel.map((x) => (x.label === "Ingredients" ? field(x.label, ingredients) : x)),
+          category: "Cosmetic",
+          markets: ["GB"],
+        },
+        book
+      )
+    );
+
+  it("counts Hexyl Cinnamal as Hexyl Cinnamal only", () => {
+    const f = withIngredients("Aqua, Parfum, Hexyl Cinnamal");
+    expect(f.allergens.reason).toContain("Hexyl Cinnamal");
+    expect(f.allergens.reason).not.toMatch(/Cinnamal, |, Cinnamal/);
+    expect(f.restricted.reason).not.toMatch(/(^|[^l] )Cinnamal —/);
+  });
+
+  it("still finds Cinnamal when it's listed on its own as well", () => {
+    const f = withIngredients("Aqua, Parfum, Cinnamal, Hexyl Cinnamal");
+    expect(f.allergens.reason).toBe("Declared: Cinnamal, Hexyl Cinnamal.");
+  });
+});

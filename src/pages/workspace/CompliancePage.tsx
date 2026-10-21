@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { AlertTriangle, Clock, Bell, Info } from "lucide-react";
 import { useBrand } from "@/lib/brand-context";
 import { daysAgo, fetchProducts, fetchSuppliers } from "@/lib/workspace-queries";
+import { fetchBrandLabels } from "@/lib/brand-labels";
 
-interface Item { severity: "danger" | "warn" | "info"; title: string; sub: string; time: string; }
+interface Item { severity: "danger" | "warn" | "info"; title: string; sub: string; time: string; to?: string; }
 
 const severityStyles: Record<Item["severity"], string> = {
   danger: "bg-[hsl(var(--risk-high-bg))] text-[hsl(var(--risk-high))]",
@@ -21,8 +23,20 @@ const CompliancePage = () => {
 
   useEffect(() => {
     if (!brand) return;
-    Promise.all([fetchProducts(brand.id), fetchSuppliers(brand.id)]).then(([products, suppliers]) => {
+    Promise.all([
+      fetchProducts(brand.id),
+      fetchSuppliers(brand.id),
+      fetchBrandLabels(brand.id).catch(() => []),
+    ]).then(([products, suppliers, labels]) => {
       const list: Item[] = [];
+      // Saved labels with failing checks (same threshold as the dashboard).
+      labels
+        .filter(l => !l.archived_at && l.compliance_score !== null && l.compliance_score < 80)
+        .forEach(l => {
+          list.push({ severity: (l.compliance_score ?? 0) < 50 ? "danger" : "warn",
+            title: `${l.product_name || "Untitled"}: ${l.compliance_score}% checks passed`,
+            sub: "Open it in the label builder to see what's missing.", time: daysAgo(l.updated_at), to: `/generate?label=${l.id}` });
+        });
       suppliers.filter(s => s.verification_status === "flagged").forEach(s => {
         list.push({ severity: "danger", title: `Supplier ${s.name} flagged`,
           sub: s.notes ?? "Verification score below threshold.", time: daysAgo(s.last_activity_at) });
@@ -63,7 +77,7 @@ const CompliancePage = () => {
                 <Icon s={a.severity} />
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-medium">{a.title}</p>
+                <p className="text-[13px] font-medium">{a.to ? <Link to={a.to} className="hover:underline">{a.title}</Link> : a.title}</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">{a.sub}</p>
                 <p className="text-[10px] text-muted-foreground mt-1">{a.time}</p>
               </div>
