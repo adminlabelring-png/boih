@@ -139,13 +139,24 @@ export const FRAGRANCE_ALLERGEN_SOURCES: Record<string, string[]> = {
 // allergens themselves (direct name match) and the natural-source lookup
 // above (inferred match), for cosmetic ingredient lists that name an
 // essential oil rather than the allergen compound directly.
+const normaliseName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+// The fragrance allergens named in an ingredient list, matched against
+// whole ingredients so "Hexyl Cinnamal" doesn't also count as Cinnamal.
+// Either name of an entry like "Butylphenyl methylpropional (Lilial)"
+// counts.
+export const namedFragranceAllergens = (ingredientsText: string): string[] => {
+  const ingredients = new Set(ingredientsText.split(/[,;]/).map(normaliseName).filter(Boolean));
+  return EU_FRAGRANCE_ALLERGENS.filter((a) => {
+    const alias = a.match(/^(.*?)\s*\((.*)\)$/);
+    const names = alias ? [alias[1], alias[2]] : [a];
+    return names.some((n) => ingredients.has(normaliseName(n)));
+  });
+};
+
 export const findFragranceAllergensInIngredients = (ingredientsText: string): string[] => {
   const lower = ingredientsText.toLowerCase();
-  const found = new Set<string>();
-
-  EU_FRAGRANCE_ALLERGENS.forEach((a) => {
-    if (lower.includes(a.toLowerCase())) found.add(a);
-  });
+  const found = new Set<string>(namedFragranceAllergens(ingredientsText));
 
   Object.entries(FRAGRANCE_ALLERGEN_SOURCES).forEach(([source, allergens]) => {
     if (lower.includes(source)) {

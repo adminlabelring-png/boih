@@ -115,6 +115,10 @@ const GenerateLabelPage = () => {
   const [variantChecks, setVariantChecks] = useState<Record<string, DraftCheck | null>>({});
   const [translating, setTranslating] = useState<string | null>(null);
   const [draftCheck, setDraftCheck] = useState<DraftCheck | null>(null);
+  // Which draft the rulebook check above was run on, so a label isn't saved
+  // with the score of an earlier draft (or of the built-in checks while the
+  // rulebook check is still running).
+  const [draftCheckKey, setDraftCheckKey] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [approving, setApproving] = useState(false);
   const [approvedUrl, setApprovedUrl] = useState<string | null>(null);
@@ -253,23 +257,37 @@ const GenerateLabelPage = () => {
 
   // Debounced rulebook check for cosmetics (no AI, cheap): re-run as the
   // draft or the chosen markets change.
+  const checkKey = JSON.stringify([fields, markets, packFormat, productType, masterCountries]);
+  const checkPending = pack === "cosmetic" && draftCheckKey !== checkKey;
   useEffect(() => {
     if (pack !== "cosmetic") {
       setDraftCheck(null);
       return;
     }
     let cancelled = false;
+    const key = checkKey;
     const t = setTimeout(() => {
       checkDraft(fields, markets, packFormat, masterCountries, productType)
-        .then((r) => !cancelled && setDraftCheck(r))
-        .catch((e) => console.warn("rulebook check failed", e));
+        .then((r) => {
+          if (cancelled) return;
+          setDraftCheck(r);
+          setDraftCheckKey(key);
+        })
+        .catch((e) => {
+          console.warn("rulebook check failed", e);
+          // Don't hold up saving: fall back to the built-in checks.
+          if (!cancelled) {
+            setDraftCheck(null);
+            setDraftCheckKey(key);
+          }
+        });
     }, 800);
     return () => {
       cancelled = true;
       clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(fields), pack, markets.join(","), packFormat, productType, masterCountries.join(",")]);
+  }, [checkKey, pack]);
 
   // Each market version checked against its own market (and country).
   useEffect(() => {
@@ -1325,6 +1343,7 @@ const GenerateLabelPage = () => {
               ...(Object.keys(variantText).length ? { variants: variantText } : {}),
             })}
             score={score}
+            checking={checkPending}
             rulebookVersion={
               rulebookFindings && draftCheck?.rulebook ? `${draftCheck.rulebook.scope} ${draftCheck.rulebook.version}` : null
             }

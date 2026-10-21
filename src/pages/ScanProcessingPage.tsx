@@ -82,9 +82,11 @@ const ScanProcessingPage = () => {
         // here — a stalled connection or a wedged upstream provider leaves
         // this awaiting forever with nothing to catch, silently defeating
         // the failure screen below. An explicit timeout turns "hangs
-        // forever" into a real, catchable error.
+        // forever" into a real, catchable error. The AI call itself
+        // sometimes takes close to a minute, so allow up to 140 s
+        // (edge functions are cut off at 150 s anyway).
         const abort = new AbortController();
-        const timeout = setTimeout(() => abort.abort(), 45_000);
+        const timeout = setTimeout(() => abort.abort(), 140_000);
         const { data, error } = await supabase.functions
           .invoke("analyze-label", {
             body: {

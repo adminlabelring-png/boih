@@ -1,5 +1,5 @@
 import { emptyLabel, getPack, type LabelFields } from "./label-rules";
-import { EU_FRAGRANCE_ALLERGENS } from "./allergens";
+import { namedFragranceAllergens } from "./allergens";
 import type { DetectedField, RuleFinding, RulebookStamp, ScanResult } from "./scan-context";
 
 // Hands a scanned label to the label builder ("Fix these"): what was read
@@ -24,6 +24,16 @@ const SCAN_TO_GENERATOR_CATEGORY: Record<string, string> = {
   household: "Household",
 };
 
+// A scan reads a cosmetic as "Cosmetic"; pick the generator category from
+// the product type and name, falling back to Skincare.
+const cosmeticCategory = (result: ScanResult, productName: string): string => {
+  const name = productName.toLowerCase();
+  if (result.rulebook?.productType === "fragrance" || /\b(parfum|perfume|eau de|cologne|body mist)\b/.test(name)) return "Fragrance";
+  if (/\b(shampoo|conditioner|hair|scalp)\b/.test(name)) return "Haircare";
+  if (/\b(lipstick|lip gloss|mascara|eyeliner|eyeshadow|foundation|concealer|blush|bronzer|nail polish)\b/.test(name)) return "Makeup";
+  return "Skincare";
+};
+
 const PAO = /\b(\d{1,2})\s?(?:m|months?)\b/i;
 
 const readValue = (fields: DetectedField[], label: string): string => {
@@ -38,7 +48,11 @@ const readValue = (fields: DetectedField[], label: string): string => {
 };
 
 export const scanToLabel = (result: ScanResult): ScanHandoff => {
-  const category = SCAN_TO_GENERATOR_CATEGORY[result.category.trim().toLowerCase()] ?? "Other";
+  const scanned = result.category.trim().toLowerCase();
+  const category =
+    scanned === "cosmetic"
+      ? cosmeticCategory(result, readValue(result.fields, "Product Name"))
+      : SCAN_TO_GENERATOR_CATEGORY[scanned] ?? "Other";
   const isCosmetic = getPack(category) === "cosmetic";
   const read = (label: string) => readValue(result.fields, label);
 
@@ -59,8 +73,7 @@ export const scanToLabel = (result: ScanResult): ScanHandoff => {
   if (isCosmetic) {
     fields.instructionsForUse = read("Warnings");
     // Only allergens named in the ingredient list as printed.
-    const ingredients = fields.ingredients.toLowerCase();
-    fields.fragranceAllergens = EU_FRAGRANCE_ALLERGENS.filter((a) => ingredients.includes(a.toLowerCase()));
+    fields.fragranceAllergens = namedFragranceAllergens(fields.ingredients);
     // The scan's leave-on / rinse-off answer carries over (it isn't read
     // off the label, so it isn't counted as prefilled).
     if (result.rulebook?.exposure) fields.cosmeticProductType = result.rulebook.exposure;

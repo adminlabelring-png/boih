@@ -29,11 +29,14 @@ interface Props {
   disabled: boolean;
   getData: () => LabelData;
   score: number | null;
+  // The regulatory check for the current draft is still running: wait, so
+  // the saved score is this draft's.
+  checking?: boolean;
   rulebookVersion: string | null;
   onSaved: (saved: EditingLabel) => void;
 }
 
-const SaveToBrand = ({ session, editing, templateOf, disabled, getData, score, rulebookVersion, onSaved }: Props) => {
+const SaveToBrand = ({ session, editing, templateOf, disabled, getData, score, checking = false, rulebookVersion, onSaved }: Props) => {
   const [brands, setBrands] = useState<{ id: string; name: string }[] | null>(null);
   const [brandId, setBrandId] = useState<string>("");
   const [open, setOpen] = useState(false);
@@ -164,8 +167,8 @@ const SaveToBrand = ({ session, editing, templateOf, disabled, getData, score, r
                 onChange={(e) => setNote(e.target.value)}
               />
             </div>
-            <Button className="w-full" onClick={save} disabled={saving || !targetBrand}>
-              {saving ? "Saving…" : "Save"}
+            <Button className="w-full" onClick={save} disabled={saving || checking || !targetBrand}>
+              {saving ? "Saving…" : checking ? "Checking the label…" : "Save"}
             </Button>
           </div>
         </DialogContent>

@@ -115,6 +115,12 @@ def cosing_inci() -> dict[str, list[str]]:
     return links
 
 
+# Words the annex text splits off as names that aren't ingredient names:
+# matched on a label they'd hit any plant extract ("Leaf", "Extract") or
+# nothing real (a botanist's name in a citation).
+NOT_NAMES = {"leaf", "leaves", "leaf powder", "leaf extract", "extract", "powder", "oil", "royle"}
+
+
 def same_substance(a: dict, b: dict) -> bool:
     norm = lambda s: re.sub(r"\s+", " ", s).strip().lower()
     return norm(a["chemical_name"]) == norm(b["chemical_name"]) or bool(set(a["cas"]) & set(b["cas"]))
@@ -146,7 +152,7 @@ def rows_for(jurisdiction: str, manifest: dict, links: dict[str, list[str]]) -> 
                 names = ([label_name] if label_name else []) + [plain(n) for n in e["inci"]] + linked + chem
                 names = [n for n in dict.fromkeys(names) if n]
                 primary = names[0]
-            synonyms = [n for n in dict.fromkeys(names) if n != primary]
+            synonyms = [n for n in dict.fromkeys(names) if n != primary and n.strip().lower() not in NOT_NAMES]
             terms = [t for n in [e["chemical_name"]] for t in derived_terms(n) if t not in names]
 
             if annex == "II":

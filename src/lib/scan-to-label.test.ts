@@ -35,6 +35,21 @@ const result = (overrides: Partial<ScanResult>): ScanResult => ({
 });
 
 describe("scanToLabel", () => {
+  it("picks the cosmetics category from the product name, defaulting to skincare", () => {
+    const cat = (name: string) => scanToLabel(result({ fields: [f("Product Name", name)] })).fields.category;
+    expect(cat("Tea Tree Scalp Shampoo")).toBe("Haircare");
+    expect(cat("Wild Fig Eau de Parfum")).toBe("Fragrance");
+    expect(cat("Velvet Matte Lipstick")).toBe("Makeup");
+    expect(cat("Rosehip Night Cream")).toBe("Skincare");
+  });
+
+  it("ticks only the allergens named as whole ingredients", () => {
+    const h = scanToLabel(
+      result({ fields: [f("Ingredients", "Aqua, Fragrance, Hexyl Cinnamal, Butylphenyl Methylpropional")] })
+    );
+    expect([...h.fields.fragranceAllergens].sort()).toEqual(["Butylphenyl methylpropional (Lilial)", "Hexyl cinnamal"]);
+  });
+
   it("carries over what was read off a cosmetic pack", () => {
     const h = scanToLabel(
       result({

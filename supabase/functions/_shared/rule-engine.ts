@@ -298,6 +298,36 @@ const officialNames = (s: Substance) => [s.inci_name, ...s.synonyms];
 
 const namedIn = (value: string, s: Substance) => officialNames(s).some((n) => containsTerm(value, n));
 
+// Where each name occurs in the text, as [start, end) offsets.
+const termSpans = (haystack: string, term: string): [number, number][] => {
+  if (term.trim().length < 3) return [];
+  const re = new RegExp(termPattern(term).source, "gi");
+  const text = haystack.toLowerCase();
+  const spans: [number, number][] = [];
+  for (let m = re.exec(text); m; m = re.exec(text)) {
+    const start = m.index + m[1].length;
+    spans.push([start, start + term.length]);
+    re.lastIndex = start + 1;
+  }
+  return spans;
+};
+
+// The substances on a list named in the text, leaving out a name that only
+// appears inside a longer name on the same list: "Hexyl Cinnamal" names
+// Hexyl Cinnamal, not Cinnamal as well.
+const namedAmong = (value: string, list: Substance[]): Substance[] => {
+  const hits = list
+    .map((s) => ({ s, spans: officialNames(s).flatMap((n) => termSpans(value, n)) }))
+    .filter((h) => h.spans.length);
+  const insideLonger = ([a, b]: [number, number], h: (typeof hits)[number]) =>
+    hits.some(
+      (o) =>
+        o.s.inci_name.toLowerCase() !== h.s.inci_name.toLowerCase() &&
+        o.spans.some(([c, d]) => c <= a && d >= b && d - c > b - a)
+    );
+  return hits.filter((h) => h.spans.some((span) => !insideLonger(span, h))).map((h) => h.s);
+};
+
 // The name as it appears on the label, for the finding text.
 // plus the listed name when the label uses another one.
 const nameOnLabel = (value: string, s: Substance) => {
@@ -428,7 +458,7 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
 
   fragrance_allergens: ({ rule, value, markets, substances, productType }) => {
     const allergens = listFor(substances, "fragrance_allergen", markets);
-    const named = allergens.filter((s) => namedIn(value, s));
+    const named = namedAmong(value, allergens);
     const namedLower = new Set(named.flatMap((s) => officialNames(s).map((n) => n.toLowerCase())));
 
     const sources = (rule.params.natural_sources ?? {}) as Record<string, string[]>;
@@ -508,7 +538,7 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
         (s.list_type === "restricted" || s.list_type === "preservative" || s.list_type === "uv_filter") &&
         inMarkets(s.markets, markets)
     );
-    const found = listed.filter((s) => namedIn(value, s));
+    const found = namedAmong(value, listed);
     if (!found.length) {
       return { status: "pass", reason: `None of the ${listed.length} restricted ingredients were found.` };
     }
