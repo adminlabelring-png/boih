@@ -153,7 +153,7 @@ def rows_for(jurisdiction: str, manifest: dict, links: dict[str, list[str]]) -> 
                 names = [n for n in dict.fromkeys(names) if n]
                 primary = names[0]
             synonyms = [n for n in dict.fromkeys(names) if n != primary and n.strip().lower() not in NOT_NAMES]
-            terms = [t for n in [e["chemical_name"]] for t in derived_terms(n) if t not in names]
+            terms = [t for n in [e["chemical_name"]] for t in derived_terms(n) if t not in names and t.strip().lower() not in NOT_NAMES]
 
             if annex == "II":
                 exception = EXCEPTION.search(e["chemical_name"])
