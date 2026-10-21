@@ -94,6 +94,8 @@ export const templateFrom = (data: LabelData): LabelData => {
   return { ...data, fields, ...(variants ? { variants } : {}) };
 };
 
+// supabase-js already retries a failed read (three times, 1-4 s apart);
+// a failure here is the caller's to show, never an empty list.
 export const fetchBrandLabels = async (brandId: string): Promise<BrandLabel[]> => {
   const { data, error } = await supabase
     .from("brand_labels" as never)

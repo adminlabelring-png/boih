@@ -9,6 +9,7 @@ import { BrandProvider, useBrand } from "@/lib/brand-context";
 import { useSeo } from "@/hooks/use-seo";
 import WorkspaceSidebar from "./WorkspaceSidebar";
 import BrandSwitcher from "./BrandSwitcher";
+import LoadError from "./LoadError";
 
 const TopBar = ({ email }: { email: string }) => {
   const { brand } = useBrand();
@@ -43,7 +44,8 @@ const NoBrands = () => (
 );
 
 const Content = () => {
-  const { brands, loading } = useBrand();
+  const { brands, loading, error, refresh } = useBrand();
+  if (!loading && error) return <LoadError what="brands" onRetry={refresh} />;
   if (!loading && brands.length === 0) return <NoBrands />;
   return <Outlet />;
 };

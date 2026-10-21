@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Tag, CheckCircle2, AlertTriangle, Clock, Bell, Factory, QrCode, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBrand } from "@/lib/brand-context";
 import { daysAgo, fetchProducts, fetchSuppliers, ProductRow, SupplierRow } from "@/lib/workspace-queries";
 import StatusPill from "@/components/workspace/StatusPill";
+import LoadError from "@/components/workspace/LoadError";
 import { fetchBrandLabels, type BrandLabel } from "@/lib/brand-labels";
 
 interface Alert {
@@ -62,15 +63,40 @@ const DashboardPage = () => {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierRow[]>([]);
   const [allLabels, setLabels] = useState<BrandLabel[]>([]);
+  // Until the labels have loaded the numbers below would read as an empty
+  // brand, so they wait; a failed load says so instead of showing zeros.
+  const [labelsState, setLabelsState] = useState<"loading" | "ready" | "error">("loading");
+
+  const loadLabels = useCallback(() => {
+    if (!brand) return;
+    setLabelsState("loading");
+    fetchBrandLabels(brand.id)
+      .then((l) => {
+        setLabels(l);
+        setLabelsState("ready");
+      })
+      .catch(() => setLabelsState("error"));
+  }, [brand]);
 
   useEffect(() => {
     if (!brand) return;
-    fetchBrandLabels(brand.id).then(setLabels).catch(() => setLabels([]));
+    loadLabels();
     fetchProducts(brand.id).then(setProducts);
     fetchSuppliers(brand.id).then(setSuppliers);
-  }, [brand]);
+  }, [brand, loadLabels]);
 
   if (loading || !brand) return <div className="text-sm text-muted-foreground">Loading workspace…</div>;
+  if (labelsState !== "ready")
+    return (
+      <div className="space-y-5">
+        <h1 className="text-lg font-semibold">Dashboard</h1>
+        {labelsState === "error" ? (
+          <LoadError what="labels" onRetry={loadLabels} />
+        ) : (
+          <p className="text-sm text-muted-foreground">Loading labels…</p>
+        )}
+      </div>
+    );
 
   const monthAgo = Date.now() - 30 * 86400000;
   const updatedThisMonth = allLabels.filter(l => !l.archived_at && +new Date(l.updated_at) >= monthAgo).length;
