@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle, AlertTriangle, HelpCircle, XCircle, ChevronDown, ExternalLink } from "lucide-react";
+import { CheckCircle, AlertTriangle, HelpCircle, XCircle, ChevronDown, ExternalLink, Info } from "lucide-react";
 import type { RuleFinding, RulebookStamp } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 import { describeMarkets, findingStatusLabel, rulebookStampText, summarizeFindings } from "@/lib/rule-findings";
@@ -9,6 +9,7 @@ const statusIcon = (status: RuleFinding["status"]) => {
     case "pass": return <CheckCircle className="h-4 w-4 text-[hsl(var(--risk-low))] shrink-0 mt-0.5" />;
     case "review": return <AlertTriangle className="h-4 w-4 text-[hsl(var(--risk-high))] shrink-0 mt-0.5" />;
     case "not_verified": return <HelpCircle className="h-4 w-4 text-[hsl(var(--risk-medium))] shrink-0 mt-0.5" />;
+    case "note": return <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />;
     case "fail": return <XCircle className="h-4 w-4 text-[hsl(var(--risk-high))] shrink-0 mt-0.5" />;
   }
 };
@@ -18,6 +19,7 @@ const statusBadgeClass = (status: RuleFinding["status"]) => {
     case "pass": return "compliance-badge-high";
     case "review": return "compliance-badge-low";
     case "not_verified": return "compliance-badge-medium";
+    case "note": return "bg-muted text-muted-foreground";
     case "fail": return "compliance-badge-low";
   }
 };
@@ -54,7 +56,11 @@ const FindingRow = ({ finding }: { finding: RuleFinding }) => (
 const FindingGroup = ({ title, findings }: { title: string; findings: RuleFinding[] }) => {
   const [showPassed, setShowPassed] = useState(false);
   if (findings.length === 0) return null;
-  const open = findings.filter((f) => f.status !== "pass");
+  // Issues and couldn't-checks first, then reminders; passed checks fold away.
+  const open = [
+    ...findings.filter((f) => f.status !== "pass" && f.status !== "note"),
+    ...findings.filter((f) => f.status === "note"),
+  ];
   const passed = findings.filter((f) => f.status === "pass");
 
   return (

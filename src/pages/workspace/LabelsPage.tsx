@@ -131,7 +131,7 @@ const LabelsPage = () => {
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search product" className="pl-8 h-8 w-56 text-sm" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search product" className="pl-8 h-8 w-44 sm:w-56 text-sm" />
           </div>
           <Button asChild size="sm" className="gap-1.5">
             <Link to="/generate">
@@ -160,11 +160,11 @@ const LabelsPage = () => {
             <thead>
               <tr className="text-[11px] uppercase tracking-wider text-muted-foreground bg-muted/50">
                 <th className="text-left font-medium px-4 py-2.5">Product</th>
-                <th className="text-left font-medium px-4 py-2.5">Category</th>
-                <th className="text-left font-medium px-4 py-2.5">Version</th>
-                <th className="text-left font-medium px-4 py-2.5">Checks passed</th>
-                <th className="text-left font-medium px-4 py-2.5">Updated</th>
-                <th className="text-right font-medium px-4 py-2.5">Actions</th>
+                <th className="hidden sm:table-cell text-left font-medium px-4 py-2.5">Category</th>
+                <th className="hidden sm:table-cell text-left font-medium px-4 py-2.5">Version</th>
+                <th className="text-left font-medium px-3 sm:px-4 py-2.5">Checks passed</th>
+                <th className="hidden sm:table-cell text-left font-medium px-4 py-2.5">Updated</th>
+                <th className="text-right font-medium px-3 sm:px-4 py-2.5">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -180,25 +180,29 @@ const LabelsPage = () => {
                         {open === r.id ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                         {r.product_name || "Untitled label"}
                       </button>
+                      {/* On a phone, category and version sit under the name. */}
+                      <div className="sm:hidden pl-5 text-[11px] text-muted-foreground">
+                        {r.category ?? "—"} · v{r.current_version}
+                      </div>
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.category ?? "—"}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">v{r.current_version}</td>
+                    <td className="hidden sm:table-cell px-4 py-2.5 text-xs text-muted-foreground">{r.category ?? "—"}</td>
+                    <td className="hidden sm:table-cell px-4 py-2.5 font-mono text-xs">v{r.current_version}</td>
                     <td className={`px-4 py-2.5 text-xs ${scoreClass(r.compliance_score)}`}>
                       {r.compliance_score === null ? "—" : `${r.compliance_score}%`}
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{new Date(r.updated_at).toLocaleDateString()}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="hidden sm:table-cell px-4 py-2.5 text-xs text-muted-foreground">{new Date(r.updated_at).toLocaleDateString()}</td>
+                    <td className="px-3 sm:px-4 py-2.5">
                       <div className="flex items-center justify-end gap-1">
                         {!r.archived_at && (
                           <>
                             <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1">
-                              <Link to={`/generate?label=${r.id}`}>
-                                <Pencil className="h-3.5 w-3.5" /> Edit
+                              <Link to={`/generate?label=${r.id}`} aria-label="Edit" title="Edit">
+                                <Pencil className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Edit</span>
                               </Link>
                             </Button>
                             <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1">
-                              <Link to={`/generate?template=${r.id}`}>
-                                <Copy className="h-3.5 w-3.5" /> Use as template
+                              <Link to={`/generate?template=${r.id}`} aria-label="Use as template" title="Use as template">
+                                <Copy className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Use as template</span>
                               </Link>
                             </Button>
                           </>
@@ -208,9 +212,11 @@ const LabelsPage = () => {
                           variant="ghost"
                           className="h-7 px-2 text-xs gap-1"
                           onClick={() => toggleArchive(r)}
+                          aria-label={r.archived_at ? "Restore" : "Archive"}
+                          title={r.archived_at ? "Restore" : "Archive"}
                         >
                           {r.archived_at ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                          {r.archived_at ? "Restore" : "Archive"}
+                          <span className="hidden sm:inline">{r.archived_at ? "Restore" : "Archive"}</span>
                         </Button>
                       </div>
                     </td>

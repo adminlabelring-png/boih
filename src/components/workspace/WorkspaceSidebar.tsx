@@ -1,28 +1,17 @@
 import { NavLink, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard, Tag, Database, ClipboardCheck,
-  Factory, CalendarClock, History, QrCode,
-  Users, Settings,
-} from "lucide-react";
+import { LayoutDashboard, Tag, ClipboardCheck, Users, Settings } from "lucide-react";
 import Logo from "@/components/Logo";
 
+// Product data, Suppliers, Seasonal SKUs, Version history and Digital
+// passport have no way to add data yet, so they're hidden (the pages and
+// routes stay, for when they do).
 const groups = [
   {
     label: "Workspace",
     items: [
       { to: "/workspace", icon: LayoutDashboard, label: "Dashboard", end: true },
       { to: "/workspace/labels", icon: Tag, label: "Labels" },
-      { to: "/workspace/products", icon: Database, label: "Product data" },
       { to: "/workspace/compliance", icon: ClipboardCheck, label: "Compliance" },
-    ],
-  },
-  {
-    label: "Monitoring",
-    items: [
-      { to: "/workspace/suppliers", icon: Factory, label: "Suppliers" },
-      { to: "/workspace/seasonal", icon: CalendarClock, label: "Seasonal SKUs" },
-      { to: "/workspace/versions", icon: History, label: "Version history" },
-      { to: "/workspace/dpp", icon: QrCode, label: "Digital passport" },
     ],
   },
   {

@@ -11,7 +11,9 @@
 
 export type Market = "GB" | "NI" | "EU";
 export type Severity = "legal" | "best_practice";
-export type FindingStatus = "fail" | "review" | "not_verified" | "pass";
+// "note": nothing wrong found, but something to confirm off the label (e.g.
+// a preservative's maximum amount). Not an issue; counts as passed.
+export type FindingStatus = "fail" | "review" | "not_verified" | "note" | "pass";
 export type VerificationStatus = "unverified" | "verified" | "rejected";
 export type Role = "manufacturer" | "importer" | "distributor";
 // What the product is packed in, from the intake question.
@@ -555,19 +557,24 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
         )}`,
       };
     }
-    const lines = describe(found, (s) => {
-      const parts = [
-        s.product_type && `product types: ${clip(s.product_type)}`,
-        s.max_concentration && `maximum: ${clip(s.max_concentration)}`,
-        s.other_conditions && `conditions: ${clip(s.other_conditions)}`,
-        s.label_warnings && `required on the label: ${clip(s.label_warnings, 500)}`,
-      ].filter(Boolean);
-      return `${nameOnLabel(value, s)} — ${kind[s.list_type]}${where(s)}${parts.length ? `: ${parts.join("; ")}` : ""}.`;
+    // One short line per ingredient, however many annex entries (GB and
+    // EU, or two entries for the same name) it has. The required wording
+    // itself is checked by the required-warnings rule.
+    const byName = new Map<string, Substance[]>();
+    for (const s of found) {
+      const name = nameOnLabel(value, s);
+      byName.set(name, [...(byName.get(name) ?? []), s]);
+    }
+    const lines = [...byName.entries()].map(([name, entries]) => {
+      const kinds = [...new Set(entries.map((s) => (s.list_type === "uv_filter" ? "UV filter" : kind[s.list_type].toLowerCase())))].join(", ");
+      const limit = entries.find((s) => s.max_concentration)?.max_concentration;
+      const condition = entries.find((s) => s.other_conditions)?.other_conditions;
+      const detail = limit ? `max ${clip(limit, 80)}` : condition ? clip(condition, 80) : null;
+      return `${name} (${kinds}${detail ? `; ${detail}` : ""})`;
     });
-    const warnings = found.some((s) => s.label_warnings);
     return {
-      status: "review",
-      reason: `${warnings ? "Check the required warnings and limits" : "Allowed within limits; check them"}: ${lines}`,
+      status: "note",
+      reason: `Allowed with limits. Confirm the amounts with your safety assessor: ${lines.join("; ")}.`,
     };
   },
 
@@ -753,7 +760,7 @@ const checks: Record<CheckType, (ctx: CheckContext) => CheckOutcome> = {
 // Evaluation
 // ------------------------------------------------------------------
 
-const STATUS_ORDER: Record<FindingStatus, number> = { fail: 0, review: 1, not_verified: 2, pass: 3 };
+const STATUS_ORDER: Record<FindingStatus, number> = { fail: 0, review: 1, not_verified: 2, note: 3, pass: 4 };
 const SEVERITY_ORDER: Record<Severity, number> = { legal: 0, best_practice: 1 };
 
 // Legal requirements first, then best practice; within each, the things

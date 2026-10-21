@@ -46,6 +46,8 @@ export interface ScanResult {
   // far); rulebook is the version they were checked against.
   findings: RuleFinding[];
   rulebook: RulebookStamp | null;
+  // Marketing claims read off the pack, carried into the label builder.
+  claims?: string[];
   isSeasonal?: boolean;
   seasonTag?: string | null;
   changes?: ScanChanges | null;
@@ -178,6 +180,7 @@ export const buildScanResult = (
     coverage?: CoverageAssessment;
     findings?: RuleFinding[];
     rulebook?: RulebookStamp | null;
+    extras?: { claims?: string[] | null } | null;
   }
 ): ScanResult => {
   const coverage: CoverageAssessment = aiData.coverage ?? {
@@ -207,6 +210,7 @@ export const buildScanResult = (
     coverage,
     findings: Array.isArray(aiData.findings) ? aiData.findings : [],
     rulebook: aiData.rulebook ?? null,
+    claims: Array.isArray(aiData.extras?.claims) ? aiData.extras.claims.filter((c) => typeof c === "string" && c.trim()) : [],
   };
 };
 

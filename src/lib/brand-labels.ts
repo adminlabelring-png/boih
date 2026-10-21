@@ -79,6 +79,7 @@ export const PRODUCT_SPECIFIC_FIELDS: (keyof LabelFields)[] = [
   "nutrition",
   "paoMonths",
   "fragranceAllergens",
+  "claims",
 ];
 
 export const templateFrom = (data: LabelData): LabelData => {
@@ -196,6 +197,7 @@ export const CHANGE_FIELD_NAMES: Record<string, string> = {
   responsiblePerson: "Responsible person (UK)",
   euResponsiblePerson: "Responsible person (EU / NI)",
   certifications: "Certifications",
+  claims: "Claims",
   dateType: "Date type",
   storageInstructions: "Storage instructions",
   quidPercent: "QUID declaration",

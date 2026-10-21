@@ -41,6 +41,14 @@ describe("summarizeFindings", () => {
     expect(summarizeFindings(findings)).toEqual({ issues: 3, notChecked: 0, passed: 2 });
   });
 
+  it("counts a reminder as passed, not as an issue", () => {
+    expect(summarizeFindings([finding("restricted", "note"), finding("batch", "pass")])).toEqual({
+      issues: 0,
+      notChecked: 0,
+      passed: 2,
+    });
+  });
+
   it("is all zero with no findings", () => {
     expect(summarizeFindings([])).toEqual({ issues: 0, notChecked: 0, passed: 0 });
   });

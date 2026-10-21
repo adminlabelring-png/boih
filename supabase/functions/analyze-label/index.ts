@@ -333,7 +333,7 @@ async function applyRulebook(
   // from the rule (tied to its source clause), not the model's own advice.
   parsed.fields = parsed.fields.map((f) => {
     if (f.status !== "missing") return f;
-    const ruleFix = findings.find((r) => r.field === f.label && r.fix && r.status !== "pass")?.fix;
+    const ruleFix = findings.find((r) => r.field === f.label && r.fix && r.status !== "pass" && r.status !== "note")?.fix;
     return ruleFix ? { ...f, suggestedFix: ruleFix } : f;
   });
 
