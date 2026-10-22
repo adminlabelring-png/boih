@@ -16,6 +16,7 @@ import LandingFooter from "@/components/landing/LandingFooter";
 import HeroCheckCard from "@/components/landing/HeroCheckCard";
 import Framework from "@/components/landing/Framework";
 import ComplianceSources from "@/components/landing/ComplianceSources";
+import PifSection from "@/components/landing/PifSection";
 import { useSeo } from "@/hooks/use-seo";
 
 const cosmeticsChecks = [
@@ -127,6 +128,9 @@ const LandingPage = () => {
         </div>
         <ComparisonTable />
       </section>
+
+      {/* PRODUCT INFORMATION FILE */}
+      <PifSection />
 
       {/* WHO IT'S FOR */}
       <section className="space-y-5">
