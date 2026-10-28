@@ -119,6 +119,31 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" className="space-y-5">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">How Labelring works</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {howItWorks.map((s, i) => (
+            <motion.div
+              key={s.title}
+              initial={{ opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.05 }}
+              className="rounded-xl border bg-card p-6 space-y-3"
+            >
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <s.icon className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="font-semibold">{s.title}</h3>
+              <p className="text-sm text-muted-foreground">{s.body}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
       {/* PROBLEM / COMPARISON */}
       <section className="space-y-5">
         <div className="max-w-2xl">
@@ -185,31 +210,6 @@ const LandingPage = () => {
           </h2>
         </div>
         <RegulationCards />
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section id="how-it-works" className="space-y-5">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">How Labelring works</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {howItWorks.map((s, i) => (
-            <motion.div
-              key={s.title}
-              initial={{ opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-              className="rounded-xl border bg-card p-6 space-y-3"
-            >
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <s.icon className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="font-semibold">{s.title}</h3>
-              <p className="text-sm text-muted-foreground">{s.body}</p>
-            </motion.div>
-          ))}
-        </div>
       </section>
 
       {/* FRAMEWORK */}

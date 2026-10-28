@@ -1,34 +1,10 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, ClipboardList, SearchCheck, FileCheck2, Handshake } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // Product Information File: what Labelring does for a brand's PIF and what
 // stays with labs and qualified safety assessors.
-
-const reasons = [
-  {
-    icon: ClipboardList,
-    title: "Enter your product data once",
-    body: "Add or scan your ingredient list (INCI), claims, packaging details and manufacturing information. No spreadsheets, no repeat requests.",
-  },
-  {
-    icon: SearchCheck,
-    title: "See what's missing straight away",
-    body: "Labelring checks your data and flags every gap, so you fix it in one go instead of going back and forth for weeks.",
-  },
-  {
-    icon: FileCheck2,
-    title: "Get a complete PIF",
-    body: "Once your data is complete, Labelring builds your Product Information File automatically, ready for the next stage.",
-  },
-  {
-    icon: Handshake,
-    title: "Reach qualified experts without the search",
-    body: "When you need lab testing or a safety assessment, we introduce you to trusted partners and give them a complete file to work from.",
-  },
-];
 
 type Step = { title: string; detail: string; cost: string; labelring: string; who: "automated" | "partner" };
 
@@ -161,28 +137,6 @@ const PifSection = () => (
         Labelring helps UK beauty, skincare and cosmetics brands prepare their Product Information File (PIF) without
         weeks of chasing data and emailing consultants.
       </p>
-    </div>
-
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Why brands choose Labelring</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {reasons.map((r, i) => (
-          <motion.div
-            key={r.title}
-            initial={{ opacity: 0, y: 8 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.05 }}
-            className="rounded-xl border bg-card p-6 space-y-3"
-          >
-            <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
-              <r.icon className="h-5 w-5 text-accent-foreground" />
-            </div>
-            <h4 className="font-semibold">{r.title}</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">{r.body}</p>
-          </motion.div>
-        ))}
-      </div>
     </div>
 
     <div className="space-y-3">
