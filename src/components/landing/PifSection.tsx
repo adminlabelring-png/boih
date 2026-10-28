@@ -6,7 +6,15 @@ import { cn } from "@/lib/utils";
 // Product Information File: what Labelring does for a brand's PIF and what
 // stays with labs and qualified safety assessors.
 
-type Step = { title: string; detail: string; cost: string; labelring: string; who: "automated" | "partner" };
+// soon: not in the product yet; shown with a "Coming soon" tag.
+type Step = {
+  title: string;
+  detail: string;
+  cost: string;
+  labelring: string;
+  who: "automated" | "partner";
+  soon?: boolean;
+};
 
 const steps: Step[] = [
   {
@@ -29,6 +37,7 @@ const steps: Step[] = [
     cost: "Bundled consultant services start around £250 + VAT per product",
     labelring: "Generates the PIF from your completed data.",
     who: "automated",
+    soon: true,
   },
   {
     title: "Lab testing",
@@ -36,6 +45,7 @@ const steps: Step[] = [
     cost: "Quoted by the lab; varies by product",
     labelring: "Introduces you to a testing lab. Results feed back into your PIF.",
     who: "partner",
+    soon: true,
   },
   {
     title: "Safety assessment",
@@ -43,6 +53,7 @@ const steps: Step[] = [
     cost: "£180 to £700 per product",
     labelring: "Introduces you to an assessor and sends them a complete file.",
     who: "partner",
+    soon: true,
   },
   {
     title: "UK notification (SCPN)",
@@ -50,15 +61,27 @@ const steps: Step[] = [
     cost: "£19 government fee plus £50 to £150 service fee",
     labelring: "Prepares the notification data for your Responsible Person.",
     who: "partner",
+    soon: true,
   },
 ];
 
 const howItWorks = [
-  "Enter or scan your product data.",
-  "Fix anything Labelring flags.",
-  "Get your PIF.",
-  "Get introduced to a lab or safety assessor when you're ready.",
+  { text: "Enter or scan your product data." },
+  { text: "Fix anything Labelring flags." },
+  { text: "Get your PIF.", soon: true },
+  { text: "Get introduced to a lab or safety assessor when you're ready.", soon: true },
 ];
+
+const ComingSoon = ({ className }: { className?: string }) => (
+  <span
+    className={cn(
+      "inline-flex shrink-0 items-center rounded-full border bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground",
+      className
+    )}
+  >
+    Coming soon
+  </span>
+);
 
 const WhoBadge = ({ who }: { who: Step["who"] }) => (
   <span
@@ -100,7 +123,10 @@ const PifSteps = () => (
             <div className="min-w-0 flex-1 space-y-2 md:contents">
               <div className="flex items-start justify-between gap-3 md:block">
                 <div>
-                  <p className="font-semibold">{s.title}</p>
+                  <p className="font-semibold">
+                    {s.title}
+                    {s.soon && <ComingSoon className="ml-2 align-middle" />}
+                  </p>
                   <p className="text-sm text-muted-foreground">{s.detail}</p>
                 </div>
                 <span className="md:hidden">
@@ -129,7 +155,10 @@ const PifSteps = () => (
 const PifSection = () => (
   <section id="product-information-file" className="space-y-8">
     <div className="max-w-3xl space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">UK cosmetics compliance</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">UK cosmetics compliance</p>
+        <ComingSoon />
+      </div>
       <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
         Get your Product Information File built in minutes, not weeks
       </h2>
@@ -160,11 +189,14 @@ const PifSection = () => (
         <h3 className="text-lg font-semibold">How it works</h3>
         <ol className="space-y-2">
           {howItWorks.map((step, i) => (
-            <li key={step} className="flex items-start gap-3 text-sm">
+            <li key={step.text} className="flex items-start gap-3 text-sm">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
                 {i + 1}
               </span>
-              <span className="pt-0.5">{step}</span>
+              <span className="pt-0.5">
+                {step.text}
+                {step.soon && <ComingSoon className="ml-2 align-middle" />}
+              </span>
             </li>
           ))}
         </ol>
