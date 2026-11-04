@@ -4,6 +4,7 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-session";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { LogoMark } from "@/components/Logo";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { BrandProvider, useBrand } from "@/lib/brand-context";
 import { useSeo } from "@/hooks/use-seo";
@@ -58,7 +59,8 @@ const Shell = ({ email }: { email: string }) => {
     return (
       <div className="min-h-screen bg-muted/30 flex flex-col">
         <header className="sticky top-0 z-40 flex h-12 items-center gap-3 border-b bg-card px-4 shrink-0">
-          <button onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></button>
+          <button onClick={() => setOpen(true)} aria-label="Open menu"><Menu className="h-5 w-5" /></button>
+          <Link to="/" aria-label="Labelring home" className="flex items-center"><LogoMark className="h-6 w-6" /></Link>
           <span className="text-sm font-semibold">Workspace</span>
           <div className="ml-auto"><BrandSwitcher /></div>
         </header>

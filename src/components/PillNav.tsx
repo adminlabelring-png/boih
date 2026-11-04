@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import Logo from "@/components/Logo";
 
 const links = [
-  { to: "/", label: "Home", end: true },
   { to: "/scan", label: "Scan" },
   { to: "/generate", label: "Generate" },
   { to: "/insights", label: "Insights" },
@@ -22,7 +21,6 @@ const PillNav = () => {
           <NavLink
             key={l.to}
             to={l.to}
-            end={l.end}
             className={({ isActive }) =>
               `px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 isActive
