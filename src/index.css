@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,101 +6,106 @@
 
 @layer base {
   :root {
-    /* Carbon Ledger — chalky paper, near-black ink, muted moss accent */
-    --background: 50 19% 94%;
-    --foreground: 96 8% 12%;
+    /* The homepage redesign's palette: white and pale teal-grey grounds,
+       near-black teal ink, teal #0F6B5C accent, orange for action needed. */
+    --background: 165 20% 96%;
+    --foreground: 165 23% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 96 8% 12%;
+    --card-foreground: 165 23% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 96 8% 12%;
+    --popover-foreground: 165 23% 10%;
 
-    --primary: 105 20% 40%;
+    --primary: 170 75% 24%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 51 15% 90%;
-    --secondary-foreground: 96 8% 12%;
+    --secondary: 165 20% 96%;
+    --secondary-foreground: 165 23% 10%;
 
-    --muted: 51 15% 91%;
-    --muted-foreground: 93 6% 36%;
+    --muted: 165 20% 94%;
+    --muted-foreground: 165 10% 32%;
 
-    --accent: 51 17% 88%;
-    --accent-foreground: 96 8% 12%;
+    --accent: 167 33% 92%;
+    --accent-foreground: 170 77% 17%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 72% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 51 17% 84%;
-    --input: 51 17% 84%;
-    --ring: 105 20% 40%;
+    --border: 160 13% 87%;
+    --input: 163 9% 48%;
+    --ring: 170 75% 24%;
 
-    --radius: 0.25rem;
+    --radius: 0.5rem;
 
     /* Compliance semantic colors */
-    --compliance-high: 142 71% 45%;
+    --compliance-high: 170 77% 17%;
     --compliance-high-foreground: 0 0% 100%;
-    --compliance-medium: 38 92% 50%;
+    --compliance-medium: 27 100% 27%;
     --compliance-medium-foreground: 0 0% 100%;
-    --compliance-low: 0 72% 51%;
+    --compliance-low: 0 72% 42%;
     --compliance-low-foreground: 0 0% 100%;
 
-    --risk-low: 142 71% 45%;
-    --risk-low-bg: 142 71% 95%;
-    --risk-medium: 38 92% 50%;
-    --risk-medium-bg: 38 92% 95%;
-    --risk-high: 0 72% 51%;
+    --risk-low: 170 77% 17%;
+    --risk-low-bg: 167 33% 92%;
+    --risk-medium: 27 100% 27%;
+    --risk-medium-bg: 33 100% 94%;
+    --risk-high: 0 72% 42%;
     --risk-high-bg: 0 72% 95%;
 
-    --success: 142 71% 45%;
+    --success: 170 77% 17%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 27 100% 27%;
     --warning-foreground: 0 0% 100%;
 
-    /* Sidebar */
-    --sidebar-background: 96 12% 10%;
-    --sidebar-foreground: 81 8% 70%;
-    --sidebar-primary: 69 17% 92%;
-    --sidebar-primary-foreground: 96 12% 10%;
-    --sidebar-accent: 94 11% 16%;
-    --sidebar-accent-foreground: 69 17% 92%;
-    --sidebar-border: 85 12% 20%;
-    --sidebar-ring: 105 20% 50%;
-    --sidebar-muted: 93 6% 55%;
+    /* Sidebar: the homepage footer's dark teal */
+    --sidebar-background: 165 23% 10%;
+    --sidebar-foreground: 165 13% 70%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 165 23% 10%;
+    --sidebar-accent: 165 18% 16%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 166 16% 21%;
+    --sidebar-ring: 165 39% 82%;
+    --sidebar-muted: 165 13% 60%;
   }
 
   .dark {
-    /* Carbon Ledger — dark counterpart */
-    --background: 96 11% 9%;
-    --foreground: 69 17% 92%;
-    --card: 94 11% 12%;
-    --card-foreground: 69 17% 92%;
-    --popover: 94 11% 12%;
-    --popover-foreground: 69 17% 92%;
-    --primary: 100 21% 53%;
-    --primary-foreground: 96 11% 9%;
-    --secondary: 94 11% 16%;
-    --secondary-foreground: 69 17% 92%;
-    --muted: 94 11% 15%;
-    --muted-foreground: 81 8% 65%;
-    --accent: 94 11% 18%;
-    --accent-foreground: 69 17% 92%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 165 23% 8%;
+    --foreground: 165 15% 92%;
+    --card: 165 20% 11%;
+    --card-foreground: 165 15% 92%;
+    --popover: 165 20% 11%;
+    --popover-foreground: 165 15% 92%;
+    --primary: 167 50% 55%;
+    --primary-foreground: 165 23% 8%;
+    --secondary: 165 18% 16%;
+    --secondary-foreground: 165 15% 92%;
+    --muted: 165 18% 14%;
+    --muted-foreground: 165 10% 68%;
+    --accent: 165 18% 18%;
+    --accent-foreground: 165 15% 92%;
+    --destructive: 0 62.8% 40%;
     --destructive-foreground: 0 0% 100%;
-    --border: 85 12% 19%;
-    --input: 85 12% 19%;
-    --ring: 100 21% 53%;
-    --sidebar-background: 96 13% 7%;
-    --sidebar-foreground: 81 8% 60%;
-    --sidebar-primary: 69 17% 92%;
-    --sidebar-primary-foreground: 96 11% 9%;
-    --sidebar-accent: 94 11% 12%;
-    --sidebar-accent-foreground: 69 17% 92%;
-    --sidebar-border: 85 12% 14%;
-    --sidebar-ring: 100 21% 53%;
-    --sidebar-muted: 81 8% 50%;
-  }
-}
+    --border: 166 16% 21%;
+    --input: 166 12% 40%;
+    --ring: 167 50% 55%;
+    --risk-low: 167 50% 60%;
+    --risk-low-bg: 167 30% 16%;
+    --risk-medium: 33 90% 62%;
+    --risk-medium-bg: 30 50% 15%;
+    --risk-high: 0 80% 66%;
+    --risk-high-bg: 0 40% 16%;
+    --sidebar-background: 165 25% 6%;
+    --sidebar-foreground: 165 13% 65%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 165 23% 8%;
+    --sidebar-accent: 165 18% 12%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 166 16% 15%;
+    --sidebar-ring: 167 50% 55%;
+    --sidebar-muted: 165 10% 50%;
+  }}
 
 @layer base {
   * {
@@ -108,12 +113,11 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-feature-settings: "cv11", "ss01";
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
-    font-weight: 800;
-    letter-spacing: -0.015em;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 }
 
