@@ -13,11 +13,11 @@ const PHOTO = {
   ),
 };
 
-test("home page is cosmetics-first", async ({ page }) => {
+test("home page follows the redesign", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Check your cosmetics label before the regulator does");
-  await expect(page.getByText("Built for cosmetics brands, with FMCG on the way.")).toBeVisible();
-  await expect(page.getByText("Where our compliance info comes from")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Labelling and paperwork for UK cosmetics brands.");
+  await expect(page.getByText("Six parts of cosmetics compliance, in one place.")).toBeVisible();
+  await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(2);
 });
 
 test("deep links load the app, and unknown pages show the 404 page", async ({ page }) => {
@@ -34,16 +34,22 @@ test("label generator offers cosmetics categories only", async ({ page }) => {
   await expect(options).toHaveText(["Skincare", "Haircare", "Makeup", "Fragrance"]);
 });
 
-test("early-access form lists cosmetics first and the rest as coming soon", async ({ page }) => {
-  await page.goto("/");
-  await page.locator("#product_category").click();
-  await expect(page.getByRole("option").first()).toHaveText("Skincare");
-  await expect(page.getByText("Coming soon", { exact: true }).last()).toBeVisible();
-  await expect(page.getByRole("option", { name: "Food" })).toBeVisible();
+test("pilot form asks for the product category and checks the email", async ({ page }) => {
+  await page.goto("/#pilot");
+  await expect(page.getByLabel("Product category")).toHaveValue("Skincare");
+  await page.getByLabel("Your name").fill("Test");
+  await page.getByLabel("Work email").fill("not-an-email");
+  await page.getByLabel("Brand or company").fill("Test Ltd");
+  // Nothing is submitted: the email is invalid.
+  await page.getByRole("button", { name: "Book a 30-minute slot" }).click();
+  await expect(page.getByText("Please enter a valid email")).toBeVisible();
 });
 
 test("scan intake asks the product type and, for non-leave-on types, leave-on or rinse-off", async ({ page }) => {
   await page.goto("/scan");
+  // Wait for the page to render before attaching the photo, or the upload
+  // can land before its change handler is in place.
+  await expect(page.getByRole("heading", { name: /^(Scan|Upload) your label$/ })).toBeVisible();
   await page.locator("input[type=file]").first().setInputFiles(PHOTO);
   await expect(page.getByText("What kind of product?")).toBeVisible();
 

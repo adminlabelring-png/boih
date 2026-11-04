@@ -55,8 +55,9 @@ const App = () => (
           <LeadTracker />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
+              {/* The homepage has its own header and footer. */}
+              <Route path="/" element={<LandingPage />} />
               <Route element={<AppLayout />}>
-                <Route path="/" element={<LandingPage />} />
                 <Route path="/scan" element={<ScanUploadPage />} />
                 <Route path="/scan/processing" element={<ScanProcessingPage />} />
                 <Route path="/scan/results" element={<ScanResultsPage />} />
