@@ -4,6 +4,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { markLeadSubmitted } from "@/components/LeadCaptureDialog";
 import { useSeo } from "@/hooks/use-seo";
+import { LogoMark } from "@/components/Logo";
 
 // The homepage, built to the "Labelring Homepage Redesign" design: its own
 // header and footer (no app nav), Inter, and the design's colours. Pilot
@@ -128,7 +129,7 @@ const LandingPage = () => {
         {/* HEADER */}
         <header style={{ borderBottom: "1px solid #D9E2DF", background: "#FFFFFF" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "12px 24px", boxSizing: "border-box", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px 24px" }}>
-        <Link to="/" style={{ fontWeight: "700", fontSize: "24px", letterSpacing: "-0.02em", color: "#14201D", textDecoration: "none", minHeight: "44px", display: "inline-flex", alignItems: "center" }}>Labelring</Link>
+        <Link to="/" style={{ fontWeight: "700", fontSize: "24px", letterSpacing: "-0.02em", color: "#14201D", textDecoration: "none", minHeight: "44px", display: "inline-flex", alignItems: "center", gap: "10px" }}><LogoMark className="h-7 w-7 shrink-0" />Labelring</Link>
         <nav style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 20px" }}>
         <Link to="/scan" style={{ color: "#14201D", textDecoration: "none", fontWeight: "500", minHeight: "44px", display: "inline-flex", alignItems: "center" }}>Scan</Link>
         <Link to="/generate" style={{ color: "#14201D", textDecoration: "none", fontWeight: "500", minHeight: "44px", display: "inline-flex", alignItems: "center" }}>Generate</Link>
