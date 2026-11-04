@@ -47,22 +47,6 @@
       }
     </script>
 
-    <script type="text/javascript">
-      // Syncs the .dark class (index.css's dark palette, incl. the logo
-      // wordmark's color) to the OS/browser color-scheme preference, and
-      // keeps it in sync if that preference changes while the tab is open.
-      // Runs before first paint to avoid a flash of the wrong theme.
-      (function () {
-        var media = window.matchMedia("(prefers-color-scheme: dark)");
-        var apply = function (isDark) {
-          document.documentElement.classList.toggle("dark", isDark);
-        };
-        apply(media.matches);
-        media.addEventListener("change", function (e) {
-          apply(e.matches);
-        });
-      })();
-    </script>
 
 </head>
 

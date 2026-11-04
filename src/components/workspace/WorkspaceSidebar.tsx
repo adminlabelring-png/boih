@@ -33,7 +33,9 @@ const WorkspaceSidebar = ({ onNavigate }: Props) => {
   return (
     <aside className="flex h-full w-60 flex-col bg-sidebar border-r border-sidebar-border md:fixed md:inset-y-0 md:left-0 md:z-30">
       <div className="flex h-14 items-center px-5 border-b border-sidebar-border shrink-0">
-        <Logo iconClassName="h-6 w-6" textClassName="text-base text-sidebar-primary" />
+        <NavLink to="/" onClick={onNavigate} aria-label="Labelring home" className="flex items-center">
+          <Logo iconClassName="h-6 w-6" textClassName="text-base text-sidebar-primary" />
+        </NavLink>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">

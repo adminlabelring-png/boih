@@ -8,7 +8,7 @@
   :root {
     /* The homepage redesign's palette: white and pale teal-grey grounds,
        near-black teal ink, teal #0F6B5C accent, orange for action needed. */
-    --background: 165 20% 96%;
+    --background: 0 0% 100%;
     --foreground: 165 23% 10%;
 
     --card: 0 0% 100%;
@@ -59,15 +59,15 @@
     --warning-foreground: 0 0% 100%;
 
     /* Sidebar: the homepage footer's dark teal */
-    --sidebar-background: 165 23% 10%;
-    --sidebar-foreground: 165 13% 70%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 165 23% 10%;
-    --sidebar-accent: 165 18% 16%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 166 16% 21%;
-    --sidebar-ring: 165 39% 82%;
-    --sidebar-muted: 165 13% 60%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 165 10% 32%;
+    --sidebar-primary: 165 23% 10%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 167 33% 92%;
+    --sidebar-accent-foreground: 170 77% 17%;
+    --sidebar-border: 160 13% 87%;
+    --sidebar-ring: 170 75% 24%;
+    --sidebar-muted: 165 10% 40%;
   }
 
   .dark {
