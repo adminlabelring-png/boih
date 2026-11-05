@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { markLeadSubmitted } from "@/components/LeadCaptureDialog";
 import { useSeo } from "@/hooks/use-seo";
-import { LogoMark } from "@/components/Logo";
+import SiteHeader from "@/components/SiteHeader";
+import BottomTabBar from "@/components/BottomTabBar";
 
 // The homepage, built to the "Labelring Homepage Redesign" design: its own
 // header and footer (no app nav), Inter, and the design's colours. Pilot
@@ -122,23 +123,20 @@ const LandingPage = () => {
     path: "/",
   });
 
+  // Links to /#pilot from other pages land here before the section exists,
+  // so scroll to the hash once the page has rendered.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [hash]);
+
   return (
+    <>
+    {/* Outside .lr-home so its link colours don't reach the header. */}
+    <SiteHeader />
     <div className="lr-home" style={{ width: "100%", background: "#FFFFFF", color: "#14201D", fontFamily: "'Inter', system-ui, sans-serif", fontSize: "17px", lineHeight: "1.55" }}>
       {/* The site's heading font and letter forms don't apply here. */}
-      <style>{`.lr-home{font-feature-settings:normal}.lr-home h1,.lr-home h2,.lr-home h3{font-family:inherit;letter-spacing:normal}.lr-home a{color:#0F6B5C}.lr-home a:hover{color:#0A4D42}`}</style>
-        {/* HEADER */}
-        <header style={{ borderBottom: "1px solid #D9E2DF", background: "#FFFFFF" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "12px 24px", boxSizing: "border-box", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px 24px" }}>
-        <Link to="/" style={{ fontWeight: "700", fontSize: "24px", letterSpacing: "-0.02em", color: "#14201D", textDecoration: "none", minHeight: "44px", display: "inline-flex", alignItems: "center", gap: "10px" }}><LogoMark className="h-7 w-7 shrink-0" />Labelring</Link>
-        <nav style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 20px" }}>
-        <Link to="/scan" style={{ color: "#14201D", textDecoration: "none", fontWeight: "500", minHeight: "44px", display: "inline-flex", alignItems: "center" }}>Scan</Link>
-        <Link to="/generate" style={{ color: "#14201D", textDecoration: "none", fontWeight: "500", minHeight: "44px", display: "inline-flex", alignItems: "center" }}>Generate</Link>
-        <Link to="/insights" style={{ color: "#14201D", textDecoration: "none", fontWeight: "500", minHeight: "44px", display: "inline-flex", alignItems: "center" }}>Insights</Link>
-        <Link to="/account" style={{ color: "#14201D", textDecoration: "none", fontWeight: "500", minHeight: "44px", display: "inline-flex", alignItems: "center" }}>Account</Link>
-        </nav>
-        <a href="#pilot" style={{ background: "#0F6B5C", color: "#FFFFFF", textDecoration: "none", fontWeight: "600", fontSize: "16px", padding: "0 20px", minHeight: "44px", borderRadius: "8px", display: "inline-flex", alignItems: "center", boxSizing: "border-box" }}>Book a 30-minute slot</a>
-        </div>
-        </header>
+      <style>{`.lr-home{font-feature-settings:normal}.lr-home h1,.lr-home h2,.lr-home h3{font-family:inherit;letter-spacing:normal}.lr-home a{color:#0F6B5C}.lr-home a:hover{color:#0A4D42}.lr-home [id]{scroll-margin-top:84px}`}</style>
 
         <main>
 
@@ -438,7 +436,11 @@ const LandingPage = () => {
         <p style={{ margin: "48px 0 0", paddingTop: "24px", borderTop: "1px solid #2E3F3B", fontSize: "14px", color: "#A9BDB8" }}>© 2026 Labelring Ltd · Built in the UK · Compliant with UK GDPR</p>
         </div>
         </footer>
+        {/* Room for the phone tab bar under the footer. */}
+        <div className="md:hidden" style={{ height: "64px", background: "#14201D" }} />
     </div>
+    <BottomTabBar />
+    </>
   );
 };
 
