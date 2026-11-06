@@ -16,6 +16,8 @@ const links = [
 const COMPACT_AT = 40;
 const EXPAND_AT = 8;
 const FULL_WIDTH = 1200;
+// When compact, the pilot button is just its round arrow (h-11 square).
+const COMPACT_CTA = 44;
 // Icon, its left padding, the gaps, the capsule padding and border.
 const CAPSULE_EXTRA = 28 + 8 + 12 * 2 + 8 * 2 + 2;
 
@@ -42,21 +44,20 @@ const useCompact = () => {
 // The site header on every public page, the homepage included: logo on the
 // left (it is the way home), a frosted-glass pill of links in the middle and
 // the pilot button on the right. On scrolling down, the name fades, and the
-// logo and button slide in to join the pill as one floating capsule; it
+// logo and the button (now just its arrow) slide in to join the pill as
+// one floating capsule; it
 // opens out again at the top of the page. On phones the links live in the
 // bottom tab bar, so only the logo and the button show here.
 const SiteHeader = () => {
   const compact = useCompact();
   const navRef = useRef<HTMLElement>(null);
-  const ctaRef = useRef<HTMLAnchorElement>(null);
   const [capsuleWidth, setCapsuleWidth] = useState<number | null>(null);
 
   // The capsule's width is measured so it can be animated (fit-content can't).
   useLayoutEffect(() => {
     const measure = () => {
       const nav = navRef.current?.offsetWidth ?? 0;
-      const cta = ctaRef.current?.offsetWidth ?? 0;
-      setCapsuleWidth(nav ? nav + cta + CAPSULE_EXTRA : null);
+      setCapsuleWidth(nav ? nav + COMPACT_CTA + CAPSULE_EXTRA : null);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -137,12 +138,26 @@ const SiteHeader = () => {
         </nav>
 
         <Link
-          ref={ctaRef}
           to="/#pilot"
-          className="group inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-[#0F6B5C] pl-4 pr-1.5 text-sm font-semibold text-white no-underline shadow-[0_6px_18px_-8px_rgba(15,107,92,0.7)] transition-colors hover:bg-[#0A4D42] hover:text-white md:pl-5 md:text-[15px]"
+          aria-label="Book a 30-minute slot"
+          title={compact ? "Book a 30-minute slot" : undefined}
+          className={cn(
+            "group inline-flex h-11 shrink-0 items-center rounded-full bg-[#0F6B5C] text-sm font-semibold text-white no-underline shadow-[0_6px_18px_-8px_rgba(15,107,92,0.7)] hover:bg-[#0A4D42] hover:text-white md:text-[15px]",
+            motion,
+            compact ? "w-11 justify-center px-1.5" : "pl-4 pr-1.5 md:pl-5",
+          )}
         >
-          Book a 30-minute slot
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/20 transition-transform group-hover:translate-x-0.5">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "overflow-hidden whitespace-nowrap",
+              motion,
+              compact ? "max-w-0 pr-0 opacity-0" : "max-w-[14rem] pr-2 opacity-100",
+            )}
+          >
+            Book a 30-minute slot
+          </span>
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 transition-transform group-hover:translate-x-0.5">
             <ArrowRight className="h-4 w-4" />
           </span>
         </Link>
