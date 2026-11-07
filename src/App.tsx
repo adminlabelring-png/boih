@@ -25,6 +25,11 @@ const PublicLabelPage = lazy(() => import("@/pages/PublicLabelPage"));
 const InsightsPage = lazy(() => import("@/pages/InsightsPage"));
 const InsightPostPage = lazy(() => import("@/pages/InsightPostPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+
+const ToStaticPage = ({ to }: { to: string }) => {
+  window.location.replace(to);
+  return null;
+};
 const AccountPage = lazy(() => import("@/pages/AccountPage"));
 const DashboardPage = lazy(() => import("@/pages/workspace/DashboardPage"));
 const LabelsPage = lazy(() => import("@/pages/workspace/LabelsPage"));
@@ -81,6 +86,9 @@ const App = () => (
                 <Route path="/workspace/team" element={<TeamPage />} />
                 <Route path="/workspace/settings" element={<SettingsPage />} />
               </Route>
+              {/* The investor page is a static file at /investors/; a host that
+                  hands /investors (no slash) to the app gets sent there. */}
+              <Route path="/investors" element={<ToStaticPage to="/investors/" />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
